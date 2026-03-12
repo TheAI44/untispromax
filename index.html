@@ -979,21 +979,22 @@ async function loadTimetableData() {
       const res=await fetch(`${SERVER_URL}/timetable?offset=${ttWeekOffset}`,{signal:AbortSignal.timeout(15000)});
       if(!res.ok)throw new Error(`Server Fehler (${res.status})`);
       ttData=await res.json();
-    // Week header
-    const wl=document.getElementById('ttWeekLabel');
-    const wd=document.getElementById('ttWeekDates');
-    if(ttWeekOffset===0&&wl)wl.textContent='Diese Woche';
-    else if(ttWeekOffset===1&&wl)wl.textContent='Nächste Woche';
-    else if(wl)wl.textContent='Diese Woche';
-    // Update nav btn disabled states
-    const navBtns=document.querySelectorAll('.tt-nav-btn');
-    if(navBtns[0])navBtns[0].disabled=ttWeekOffset<=TT_MIN_OFFSET;
-    if(navBtns[2])navBtns[2].disabled=ttWeekOffset>=TT_MAX_OFFSET;
-    if(wd)wd.textContent=`${fmtDate(ttData.week.monday)} – ${fmtDate(ttData.week.friday)}`;
-    renderDayLessons(selectedDayIdx);
-  } catch(err) {
+      // Week header
+      const wl=document.getElementById('ttWeekLabel');
+      const wd=document.getElementById('ttWeekDates');
+      if(ttWeekOffset===0&&wl)wl.textContent='Diese Woche';
+      else if(ttWeekOffset===1&&wl)wl.textContent='Nächste Woche';
+      else if(wl)wl.textContent='Diese Woche';
+      // Update nav btn disabled states
+      const navBtns=document.querySelectorAll('.tt-nav-btn');
+      if(navBtns[0])navBtns[0].disabled=ttWeekOffset<=TT_MIN_OFFSET;
+      if(navBtns[2])navBtns[2].disabled=ttWeekOffset>=TT_MAX_OFFSET;
+      if(wd)wd.textContent=`${fmtDate(ttData.week.monday)} – ${fmtDate(ttData.week.friday)}`;
+      renderDayLessons(selectedDayIdx);
       lastErr=null; break; // success
-    } catch(err){ lastErr=err; }
+    } catch(err) {
+      lastErr=err;
+    }
   }
   if(lastErr){
     el.innerHTML=`<div class="empty-state"><p style="color:var(--danger)">⚠️ ${lastErr.message}</p><p style="font-size:0.8rem;color:var(--text-muted);margin-top:8px;">Der Server schläft möglicherweise. Bitte warte 30 Sek.</p><button class="btn btn-secondary" style="margin-top:16px;width:auto;padding:10px 20px;" onclick="loadTimetableData()">Erneut versuchen</button></div>`;
