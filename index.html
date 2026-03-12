@@ -675,27 +675,37 @@
   </div>
 </div>
 
-<script>
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import { getFirestore, doc, getDoc, setDoc, onSnapshot, updateDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
 // ════════════════════════════════════════════════
-// STORAGE HELPER (localStorage as DB simulation)
+// FIREBASE INIT
 // ════════════════════════════════════════════════
-const DB = {
-  get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
-  set(k, v) { localStorage.setItem(k, JSON.stringify(v)); },
-  del(k) { localStorage.removeItem(k); }
+const firebaseConfig = {
+  apiKey: "AIzaSyBVwK1RTQiDwDT7hNieij8lFFXjXubxEUs",
+  authDomain: "untispromax.firebaseapp.com",
+  projectId: "untispromax",
+  storageBucket: "untispromax.firebasestorage.app",
+  messagingSenderId: "518480422318",
+  appId: "1:518480422318:web:4fed5668df640ca2b7943f"
 };
+const fbApp = initializeApp(firebaseConfig);
+const auth = getAuth(fbApp);
+const db = getFirestore(fbApp);
 
 // ════════════════════════════════════════════════
 // APP STATE
 // ════════════════════════════════════════════════
 let currentUser = null;
-let users = DB.get('hlg_users') || {};
-let homework = DB.get('hlg_homework') || getSampleHW();
-let events = DB.get('hlg_events') || getSampleEvents();
-let chats = DB.get('hlg_chats') || {};
+let users = {};
+let homework = [];
+let events = [];
+let chats = {};
 let currentPage = 'home';
 let currentChatId = null;
-let addingFor = 'homework'; // 'homework','tests','events'
+let addingFor = 'homework';
 let hwFilter = 'upcoming';
 let testFilter = 'upcoming';
 let eventFilter = 'upcoming';
@@ -703,12 +713,73 @@ let signupTempEmail = '';
 let signupTempPw = '';
 let signupIsAdmin = false;
 let selectedDayIdx = new Date().getDay() === 0 ? 6 : (new Date().getDay() === 6 ? 5 : new Date().getDay() - 1);
+let ttData = null;
+let ttWeekOffset = 0;
+const SERVER_URL = 'https://untispromax-server-1.onrender.com';
 
-function saveData() {
-  DB.set('hlg_users', users);
-  DB.set('hlg_homework', homework);
-  DB.set('hlg_events', events);
-  DB.set('hlg_chats', chats);
+// ════════════════════════════════════════════════
+// FIRESTORE HELPERS
+// ════════════════════════════════════════════════
+async function fbGet(docId) {
+  const snap = await getDoc(doc(db, 'appdata', docId));
+  return snap.exists() ? snap.data().value : null;
+}
+async function fbSet(docId, value) {
+  await setDoc(doc(db, 'appdata', docId), { value });
+}
+
+async function loadAllData() {
+  const [hwData, evData, usersData, chatsData] = await Promise.all([
+    fbGet('homework'), fbGet('events'), fbGet('users'), fbGet('chats')
+  ]);
+  homework = hwData || getSampleHW();
+  events = evData || getSampleEvents();
+  users = usersData || {};
+  chats = chatsData || {};
+  if (!hwData) await fbSet('homework', homework);
+  if (!evData) await fbSet('events', events);
+  if (!usersData) await fbSet('users', users);
+  if (!chatsData) await fbSet('chats', chats);
+}
+
+async function saveData() {
+  await Promise.all([
+    fbSet('homework', homework),
+    fbSet('events', events),
+    fbSet('users', users),
+    fbSet('chats', chats),
+  ]);
+}
+
+// Echtzeit-Listener
+function startRealtimeListeners() {
+  onSnapshot(doc(db, 'appdata', 'chats'), snap => {
+    if (snap.exists()) {
+      chats = snap.data().value || {};
+      if (currentChatId) renderMessages();
+      if (currentPage === 'chat') renderChatList();
+    }
+  });
+  onSnapshot(doc(db, 'appdata', 'homework'), snap => {
+    if (snap.exists()) {
+      homework = snap.data().value || [];
+      if (currentPage === 'homework') renderHW();
+      if (currentPage === 'tests') renderTests();
+      if (currentPage === 'home') renderHome();
+    }
+  });
+  onSnapshot(doc(db, 'appdata', 'events'), snap => {
+    if (snap.exists()) {
+      events = snap.data().value || [];
+      if (currentPage === 'events') renderEvents();
+      if (currentPage === 'home') renderHome();
+    }
+  });
+  onSnapshot(doc(db, 'appdata', 'users'), snap => {
+    if (snap.exists()) {
+      users = snap.data().value || {};
+    }
+  });
 }
 
 // ════════════════════════════════════════════════
@@ -716,32 +787,24 @@ function saveData() {
 // ════════════════════════════════════════════════
 function getSampleHW() {
   const today = new Date();
-  const d = (n) => {
-    const dt = new Date(today); dt.setDate(dt.getDate() + n);
-    return dt.toISOString().split('T')[0];
-  };
+  const d = (n) => { const dt = new Date(today); dt.setDate(dt.getDate() + n); return dt.toISOString().split('T')[0]; };
   return [
     { id: uid(), type: 'Hausaufgabe', subject: 'Mathematik', desc: 'Seite 42, Aufgabe 1–5 lösen', date: d(2), done: false, createdBy: 'system' },
-    { id: uid(), type: 'Test', subject: 'Englisch', desc: 'Vokabeltest Unit 5 – alle Wörter', date: d(3), done: false, createdBy: 'system' },
-    { id: uid(), type: 'Klausur', subject: 'Physik', desc: 'Klausur zu Kapitel 3: Mechanik', date: d(6), done: false, createdBy: 'system' },
-    { id: uid(), type: 'Hausaufgabe', subject: 'Deutsch', desc: 'Aufsatz zum Thema „Moderne Technologie" – 2 Seiten', date: d(4), done: false, createdBy: 'system' },
-    { id: uid(), type: 'KE', subject: 'Biologie', desc: 'Referat über die Zellteilung vorbereiten', date: d(-2), done: false, createdBy: 'system' },
+    { id: uid(), type: 'Test', subject: 'Englisch', desc: 'Vokabeltest Unit 5', date: d(3), done: false, createdBy: 'system' },
+    { id: uid(), type: 'Klausur', subject: 'Physik', desc: 'Klausur Kapitel 3: Mechanik', date: d(6), done: false, createdBy: 'system' },
+    { id: uid(), type: 'Hausaufgabe', subject: 'Deutsch', desc: 'Aufsatz „Moderne Technologie" – 2 Seiten', date: d(4), done: false, createdBy: 'system' },
+    { id: uid(), type: 'KE', subject: 'Biologie', desc: 'Referat Zellteilung vorbereiten', date: d(-2), done: false, createdBy: 'system' },
   ];
 }
-
 function getSampleEvents() {
   const today = new Date();
-  const d = (n) => {
-    const dt = new Date(today); dt.setDate(dt.getDate() + n);
-    return dt.toISOString().split('T')[0];
-  };
+  const d = (n) => { const dt = new Date(today); dt.setDate(dt.getDate() + n); return dt.toISOString().split('T')[0]; };
   return [
     { id: uid(), title: 'Klassenfest', desc: 'Klassenfest im Schulhof – bitte Essen mitbringen!', date: d(5), createdBy: 'system' },
     { id: uid(), title: 'Schulausflug Hamburg', desc: 'Besuch des Miniatur Wunderlands und Hafen-Rundfahrt.', date: d(12), createdBy: 'system' },
     { id: uid(), title: 'Elternabend', desc: 'Elternabend in der Aula, Beginn 19:00 Uhr.', date: d(-7), createdBy: 'system' },
   ];
 }
-
 function uid() { return Math.random().toString(36).slice(2, 10); }
 
 // ════════════════════════════════════════════════
@@ -756,21 +819,24 @@ function switchTab(mode) {
   clearMsg();
   if (mode === 'signup') showStep(1);
 }
+window.switchTab = switchTab;
 
-function showMsg(text, type = 'error') {
-  const box = document.getElementById('msgBox');
-  box.innerHTML = `<div class="msg msg-${type}">${text}</div>`;
-}
+function showMsg(text, type = 'error') { document.getElementById('msgBox').innerHTML = `<div class="msg msg-${type}">${text}</div>`; }
 function clearMsg() { document.getElementById('msgBox').innerHTML = ''; }
 
-function doLogin() {
+async function doLogin() {
   const email = document.getElementById('loginEmail').value.trim().toLowerCase();
   const pw = document.getElementById('loginPassword').value;
   if (!email || !pw) return showMsg('Bitte alle Felder ausfüllen.');
-  const user = users[email];
-  if (!user || user.password !== pw) return showMsg('E-Mail oder Passwort falsch.');
-  loginSuccess(user);
+  showMsg('Anmelden…', 'info');
+  try {
+    await signInWithEmailAndPassword(auth, email, pw);
+    // onAuthStateChanged übernimmt den Rest
+  } catch (e) {
+    showMsg('E-Mail oder Passwort falsch.');
+  }
 }
+window.doLogin = doLogin;
 
 function signupStep1() {
   const email = document.getElementById('regEmail').value.trim().toLowerCase();
@@ -778,12 +844,12 @@ function signupStep1() {
   if (!email || !pw) return showMsg('Bitte alle Felder ausfüllen.');
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return showMsg('Ungültige E-Mail-Adresse.');
   if (pw.length < 6) return showMsg('Passwort muss mindestens 6 Zeichen haben.');
-  if (users[email]) return showMsg('Diese E-Mail ist bereits registriert.');
   signupTempEmail = email;
   signupTempPw = pw;
   clearMsg();
   showStep(2);
 }
+window.signupStep1 = signupStep1;
 
 function signupStep3() {
   const code = document.getElementById('classCode').value.trim().toUpperCase();
@@ -799,28 +865,40 @@ function signupStep3() {
   }
   setTimeout(() => { clearMsg(); showStep(3); }, 800);
 }
+window.signupStep3 = signupStep3;
 
-function signupStep3b() {
+async function signupStep3b() {
   const name = document.getElementById('regName').value.trim();
   if (!name) return showMsg('Bitte deinen Namen eingeben.');
-  const user = {
-    email: signupTempEmail,
-    password: signupTempPw,
-    name,
-    isAdmin: signupIsAdmin,
-    canPost: true,
-    canChat: true,
-    photo: null,
-    id: uid(),
-    joinedAt: new Date().toISOString()
-  };
-  users[signupTempEmail] = user;
-  if (!chats['class']) initClassChat();
-  chats['class'].members = Object.keys(users);
-  saveData();
-  showMsg(`🎉 Willkommen, ${name}!`, 'success');
-  setTimeout(() => loginSuccess(user), 1000);
+  showMsg('Konto wird erstellt…', 'info');
+  try {
+    // Firebase Auth Account erstellen
+    const cred = await createUserWithEmailAndPassword(auth, signupTempEmail, signupTempPw);
+    const uid2 = cred.user.uid;
+
+    // Nutzerprofil in Firestore speichern
+    await loadAllData(); // aktuelle users laden
+    users[signupTempEmail] = {
+      email: signupTempEmail,
+      name,
+      isAdmin: signupIsAdmin,
+      canPost: true,
+      canChat: true,
+      photo: null,
+      id: uid2,
+      joinedAt: new Date().toISOString()
+    };
+    if (!chats['class']) initClassChat();
+    if (!chats['class'].members.includes(signupTempEmail)) chats['class'].members.push(signupTempEmail);
+    await saveData();
+    showMsg(`🎉 Willkommen, ${name}!`, 'success');
+    // onAuthStateChanged übernimmt Login
+  } catch (e) {
+    if (e.code === 'auth/email-already-in-use') showMsg('Diese E-Mail ist bereits registriert. Bitte anmelden.');
+    else showMsg('Fehler: ' + e.message);
+  }
 }
+window.signupStep3b = signupStep3b;
 
 function showStep(n) {
   [1,2,3].forEach(i => {
@@ -831,33 +909,53 @@ function showStep(n) {
 
 function initClassChat() {
   chats['class'] = {
-    id: 'class',
-    type: 'group',
-    name: 'Klassenchat 8a',
+    id: 'class', type: 'group', name: 'Klassenchat 8a',
     members: [],
-    messages: [
-      { id: uid(), sender: 'system', text: '👋 Willkommen im Klassenchat! Hier könnt ihr euch austauschen.', ts: Date.now() - 3600000 }
-    ],
+    messages: [{ id: uid(), sender: 'system', text: '👋 Willkommen im Klassenchat!', ts: Date.now() }],
     mutedUsers: []
   };
 }
 
-function loginSuccess(user) {
-  currentUser = user;
-  DB.set('hlg_session', user.email);
+async function loginSuccess(fbUser) {
+  await loadAllData();
+  const profile = users[fbUser.email?.toLowerCase()];
+  if (!profile) {
+    // Nutzer existiert in Firebase Auth aber nicht in Firestore – nochmal registrieren
+    await signOut(auth);
+    showMsg('Profil nicht gefunden. Bitte erneut registrieren.');
+    return;
+  }
+  currentUser = profile;
   if (!chats['class']) initClassChat();
-  if (!chats['class'].members.includes(user.email)) chats['class'].members.push(user.email);
-  saveData();
+  if (!chats['class'].members.includes(currentUser.email)) {
+    chats['class'].members.push(currentUser.email);
+    await saveData();
+  }
   document.getElementById('authScreen').classList.add('hidden');
   document.getElementById('appScreen').classList.remove('hidden');
+  startRealtimeListeners();
   initApp();
 }
 
-function logout() {
-  DB.del('hlg_session');
+async function logout() {
+  await signOut(auth);
   currentUser = null;
+  document.getElementById('appScreen').classList.add('hidden');
+  document.getElementById('authScreen').classList.remove('hidden');
   location.reload();
 }
+window.logout = logout;
+
+// Firebase Auth State Listener – läuft beim Seitenaufruf automatisch
+onAuthStateChanged(auth, async (fbUser) => {
+  if (fbUser) {
+    await loginSuccess(fbUser);
+  } else {
+    // Nicht eingeloggt – Auth-Screen zeigen
+    document.getElementById('authScreen').classList.remove('hidden');
+    document.getElementById('appScreen').classList.add('hidden');
+  }
+});
 
 // ════════════════════════════════════════════════
 // APP INIT
@@ -866,16 +964,12 @@ function initApp() {
   updateAvatar();
   startClock();
   goTo('home');
-  renderChatList();
 }
 
 function updateAvatar() {
   const el = document.getElementById('topbarAvatar');
-  if (currentUser.photo) {
-    el.innerHTML = `<img src="${currentUser.photo}">`;
-  } else {
-    el.textContent = currentUser.name ? currentUser.name[0].toUpperCase() : '?';
-  }
+  if (currentUser.photo) el.innerHTML = `<img src="${currentUser.photo}">`;
+  else el.textContent = currentUser.name ? currentUser.name[0].toUpperCase() : '?';
 }
 
 function startClock() {
@@ -883,11 +977,16 @@ function startClock() {
     const now = new Date();
     const days = ['Sonntag','Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag'];
     const months = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
-    document.getElementById('homeDate').textContent = `${days[now.getDay()]}, ${now.getDate()}. ${months[now.getMonth()]} ${now.getFullYear()}`;
-    document.getElementById('homeClock').textContent = now.toLocaleTimeString('de-DE', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
-    const h = now.getHours();
-    let greet = h < 5 ? 'Gute Nacht' : h < 12 ? 'Guten Morgen' : h < 18 ? 'Guten Tag' : 'Guten Abend';
-    document.getElementById('homeGreeting').textContent = `${greet}, ${currentUser.name}! ${currentUser.isAdmin ? '👑 Admin' : ''}`;
+    const dateEl = document.getElementById('homeDate');
+    const clockEl = document.getElementById('homeClock');
+    const greetEl = document.getElementById('homeGreeting');
+    if (dateEl) dateEl.textContent = `${days[now.getDay()]}, ${now.getDate()}. ${months[now.getMonth()]} ${now.getFullYear()}`;
+    if (clockEl) clockEl.textContent = now.toLocaleTimeString('de-DE', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    if (greetEl) {
+      const h = now.getHours();
+      const greet = h < 5 ? 'Gute Nacht' : h < 12 ? 'Guten Morgen' : h < 18 ? 'Guten Tag' : 'Guten Abend';
+      greetEl.textContent = `${greet}, ${currentUser.name}! ${currentUser.isAdmin ? '👑 Admin' : ''}`;
+    }
   }
   tick(); setInterval(tick, 1000);
 }
@@ -907,7 +1006,6 @@ function goTo(page) {
   document.getElementById('fabBtn').style.display = 'none';
   document.getElementById('chatListView').style.display = page === 'chat' ? 'block' : 'none';
   document.getElementById('chatView').classList.remove('active');
-
   if (page === 'home') renderHome();
   if (page === 'timetable') renderTimetable();
   if (page === 'homework') renderHW();
@@ -916,164 +1014,84 @@ function goTo(page) {
   if (page === 'chat') renderChatList();
   if ((page === 'homework' || page === 'tests') && canEdit()) document.getElementById('fabBtn').style.display = 'flex';
 }
+window.goTo = goTo;
 
 function canEdit() { return currentUser && (currentUser.isAdmin || currentUser.canPost); }
-
-function showFabIfAllowed() {
-  if (canEdit()) document.getElementById('fabBtn').style.display = 'flex';
-}
-
+function showFabIfAllowed() { if (canEdit()) document.getElementById('fabBtn').style.display = 'flex'; }
 function openFab() {
   if (currentPage === 'homework') { addingFor = 'homework'; openAddModal('homework'); }
   else if (currentPage === 'tests') { addingFor = 'tests'; openAddModal('tests'); }
   else if (currentPage === 'events') { addingFor = 'events'; openAddModal('events'); }
 }
+window.openFab = openFab;
 
 // ════════════════════════════════════════════════
-// HOME RENDER
+// HOME
 // ════════════════════════════════════════════════
 function renderHome() {
   const today = new Date(); today.setHours(0,0,0,0);
   const week = new Date(today); week.setDate(week.getDate() + 7);
   const fmt = (d) => new Date(d).toLocaleDateString('de-DE', {day:'2-digit',month:'2-digit'});
   const daysLeft = (d) => Math.ceil((new Date(d) - today) / 86400000);
-
-  // Homework overview
   const upcoming = homework.filter(h => !h.done && ['Hausaufgabe','KE'].includes(h.type) && new Date(h.date) >= today && new Date(h.date) <= week);
   const hwEl = document.getElementById('homeHwList');
-  if (upcoming.length === 0) hwEl.innerHTML = `<div class="empty-state"><p>Keine Hausaufgaben diese Woche 🎉</p></div>`;
-  else hwEl.innerHTML = upcoming.map(h => {
-    const dl = daysLeft(h.date);
-    const cls = dl <= 1 ? 'urgent' : dl <= 3 ? 'warning' : '';
-    return `<div class="card ${cls}" onclick="goTo('homework')">
-      <div class="card-row">
-        <div><div class="card-title">${h.subject}</div><div class="card-sub">${h.desc.slice(0,50)}…</div></div>
-        <span class="badge badge-${dl <= 1 ? 'danger' : dl <= 3 ? 'warning' : 'accent'}">${dl === 0 ? 'Heute' : dl === 1 ? 'Morgen' : 'in '+dl+'d'}</span>
-      </div>
-    </div>`;
-  }).join('');
-
-  // Tests overview
+  if (hwEl) hwEl.innerHTML = upcoming.length === 0 ? `<div class="empty-state"><p>Keine Hausaufgaben diese Woche 🎉</p></div>` :
+    upcoming.map(h => { const dl = daysLeft(h.date); return `<div class="card ${dl<=1?'urgent':dl<=3?'warning':''}" onclick="goTo('homework')"><div class="card-row"><div><div class="card-title">${h.subject}</div><div class="card-sub">${h.desc.slice(0,50)}</div></div><span class="badge badge-${dl<=1?'danger':dl<=3?'warning':'accent'}">${dl===0?'Heute':dl===1?'Morgen':'in '+dl+'d'}</span></div></div>`; }).join('');
   const tests = homework.filter(h => !h.done && ['Test','Arbeit','Klausur'].includes(h.type) && new Date(h.date) >= today && new Date(h.date) <= week);
   const testEl = document.getElementById('homeTestList');
-  if (tests.length === 0) testEl.innerHTML = `<div class="empty-state"><p>Keine Tests diese Woche ✅</p></div>`;
-  else testEl.innerHTML = tests.map(h => {
-    const dl = daysLeft(h.date);
-    return `<div class="card ${dl <= 1 ? 'urgent' : 'warning'}" onclick="goTo('tests')">
-      <div class="card-row">
-        <div><div class="card-title">${h.type}: ${h.subject}</div><div class="card-sub">${h.desc.slice(0,50)}</div></div>
-        <span class="badge badge-${dl <= 1 ? 'danger' : 'warning'}">${dl === 0 ? 'Heute!' : 'in '+dl+'d'}</span>
-      </div>
-    </div>`;
-  }).join('');
-
-  // Events
+  if (testEl) testEl.innerHTML = tests.length === 0 ? `<div class="empty-state"><p>Keine Tests diese Woche ✅</p></div>` :
+    tests.map(h => { const dl = daysLeft(h.date); return `<div class="card ${dl<=1?'urgent':'warning'}" onclick="goTo('tests')"><div class="card-row"><div><div class="card-title">${h.type}: ${h.subject}</div><div class="card-sub">${h.desc.slice(0,50)}</div></div><span class="badge badge-${dl<=1?'danger':'warning'}">${dl===0?'Heute!':'in '+dl+'d'}</span></div></div>`; }).join('');
   const evts = events.filter(e => new Date(e.date) >= today && new Date(e.date) <= week);
   const evEl = document.getElementById('homeEventList');
-  if (evts.length === 0) evEl.innerHTML = `<div class="empty-state"><p>Keine Ereignisse diese Woche</p></div>`;
-  else evEl.innerHTML = evts.map(e => `<div class="card event" onclick="goTo('events')">
-    <div class="card-row">
-      <div><div class="card-title">${e.title}</div><div class="card-sub">${fmt(e.date)}</div></div>
-      <span class="badge badge-success">Bald</span>
-    </div>
-  </div>`).join('');
+  if (evEl) evEl.innerHTML = evts.length === 0 ? `<div class="empty-state"><p>Keine Ereignisse diese Woche</p></div>` :
+    evts.map(e => `<div class="card event" onclick="goTo('events')"><div class="card-row"><div><div class="card-title">${e.title}</div><div class="card-sub">${fmt(e.date)}</div></div><span class="badge badge-success">Bald</span></div></div>`).join('');
 }
 
 // ════════════════════════════════════════════════
-// TIMETABLE – Live via Proxy-Server
+// TIMETABLE
 // ════════════════════════════════════════════════
 const DAYS = ['Montag','Dienstag','Mittwoch','Donnerstag','Freitag'];
 
-// ⚠️ NACH DEM DEPLOY AUF RENDER.COM: diese URL ersetzen!
-// Beispiel: 'https://untispromax-server.onrender.com'
-const SERVER_URL = 'https://untispromax-server-1.onrender.com';
-
-let ttData = null; // gecachte Daten vom Server
-let ttWeekOffset = 0;
-
 async function renderTimetable() {
   const tabsEl = document.getElementById('dayTabs');
-  tabsEl.innerHTML = DAYS.map((d, i) =>
-    `<button class="day-tab${i === selectedDayIdx ? ' active' : ''}" onclick="selectDay(${i})">${d}</button>`
-  ).join('') + `
-    <button class="day-tab" onclick="changeWeek(-1)" style="margin-left:auto;">← Vorwoche</button>
-    <button class="day-tab" onclick="changeWeek(1)">Nächste →</button>
-  `;
-
+  tabsEl.innerHTML = DAYS.map((d, i) => `<button class="day-tab${i===selectedDayIdx?' active':''}" onclick="selectDay(${i})">${d}</button>`).join('') +
+    `<button class="day-tab" onclick="changeWeek(-1)" style="margin-left:auto;">← Vorwoche</button><button class="day-tab" onclick="changeWeek(1)">Nächste →</button>`;
   await loadTimetableData();
 }
 
 async function loadTimetableData() {
   const el = document.getElementById('ttContent');
-  el.innerHTML = `<div class="tt-loading"><div class="spinner"></div><div>Stundenplan wird von WebUntis geladen…</div></div>`;
-
+  el.innerHTML = `<div class="tt-loading"><div class="spinner"></div><div>Stundenplan wird geladen…</div></div>`;
   try {
     const res = await fetch(`${SERVER_URL}/timetable?offset=${ttWeekOffset}`);
     if (!res.ok) throw new Error(`Server antwortet nicht (${res.status})`);
     ttData = await res.json();
-
-    // Wochenanzeige updaten
-    document.querySelector('.timetable-note').innerHTML = `
-      <strong>8a – Live-Stundenplan (WebUntis)</strong><br>
-      Woche: ${ttData.week.monday} bis ${ttData.week.friday} &nbsp;·&nbsp;
-      <span style="color:var(--success)">✓ Live-Daten</span> &nbsp;·&nbsp;
-      <span style="color:var(--text-muted);font-size:0.75rem;">Zuletzt aktualisiert: ${new Date(ttData.updatedAt).toLocaleTimeString('de-DE')}</span>
-    `;
-
+    document.querySelector('.timetable-note').innerHTML = `<strong>${ttData.className || '8a'} – Live-Stundenplan (WebUntis)</strong><br>Woche: ${ttData.week.monday} bis ${ttData.week.friday} &nbsp;·&nbsp; <span style="color:var(--success)">✓ Live-Daten</span>`;
     renderDayLessons(selectedDayIdx);
   } catch (err) {
-    el.innerHTML = `
-      <div class="empty-state">
-        <p style="color:var(--danger)">⚠️ Stundenplan konnte nicht geladen werden.</p>
-        <p style="margin-top:8px;font-size:0.8rem;color:var(--text-muted)">${err.message}</p>
-        <p style="margin-top:12px;font-size:0.78rem;color:var(--text-muted)">
-          Stelle sicher, dass der Server läuft unter:<br>
-          <code style="color:var(--accent)">${SERVER_URL}</code>
-        </p>
-        <button class="btn btn-secondary" style="margin-top:16px;width:auto;padding:10px 20px;" onclick="loadTimetableData()">Erneut versuchen</button>
-      </div>`;
+    el.innerHTML = `<div class="empty-state"><p style="color:var(--danger)">⚠️ ${err.message}</p><button class="btn btn-secondary" style="margin-top:16px;width:auto;padding:10px 20px;" onclick="loadTimetableData()">Erneut versuchen</button></div>`;
   }
 }
+window.loadTimetableData = loadTimetableData;
 
-function changeWeek(dir) {
-  ttWeekOffset += dir;
-  ttData = null;
-  loadTimetableData();
-}
+function changeWeek(dir) { ttWeekOffset += dir; ttData = null; loadTimetableData(); }
+window.changeWeek = changeWeek;
 
 function selectDay(idx) {
   selectedDayIdx = idx;
-  document.querySelectorAll('.day-tab').forEach((t, i) => {
-    if (i < 5) t.classList.toggle('active', i === idx);
-  });
+  document.querySelectorAll('.day-tab').forEach((t, i) => { if (i < 5) t.classList.toggle('active', i === idx); });
   renderDayLessons(idx);
 }
+window.selectDay = selectDay;
 
 function renderDayLessons(idx) {
   const lessons = ttData?.days?.[idx] || [];
   const el = document.getElementById('ttContent');
-  if (lessons.length === 0) {
-    el.innerHTML = '<div class="empty-state"><p>Kein Unterricht / keine Daten</p></div>';
-    return;
-  }
+  if (!lessons.length) { el.innerHTML = '<div class="empty-state"><p>Kein Unterricht</p></div>'; return; }
   el.innerHTML = lessons.map(l => {
     const cls = l.cancelled ? 'cancelled' : l.substitution ? 'substitution' : '';
-    const tag = l.cancelled
-      ? `<span class="tag-cancel">ENTFALL</span>`
-      : l.substitution
-        ? `<span class="tag-sub">VERTRETUNG</span>`
-        : '';
-    const noteText = l.note ? ` · ${l.note}` : '';
-    return `<div class="lesson-card ${cls}">
-      <div class="lesson-time">${l.time}</div>
-      <div style="flex:1;">
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-          ${tag}
-          <span class="lesson-subject">${l.subject}</span>
-        </div>
-        <div class="lesson-room">${l.teacher} · ${l.room}${noteText}</div>
-      </div>
-    </div>`;
+    const tag = l.cancelled ? `<span class="tag-cancel">ENTFALL</span>` : l.substitution ? `<span class="tag-sub">VERTRETUNG</span>` : '';
+    return `<div class="lesson-card ${cls}"><div class="lesson-time">${l.time}</div><div style="flex:1;"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">${tag}<span class="lesson-subject">${l.subject}</span></div><div class="lesson-room">${l.teacher} · ${l.room}${l.note?' · '+l.note:''}</div></div></div>`;
   }).join('');
 }
 
@@ -1083,20 +1101,20 @@ function renderDayLessons(idx) {
 function setHwFilter(f, el) {
   hwFilter = f;
   document.querySelectorAll('#homeworkPage .filter-tab').forEach(t => t.classList.remove('active'));
-  el.classList.add('active');
-  renderHW();
+  el.classList.add('active'); renderHW();
 }
+window.setHwFilter = setHwFilter;
 
 function renderHW() {
   const today = new Date(); today.setHours(0,0,0,0);
   let items = homework.filter(h => ['Hausaufgabe','KE'].includes(h.type));
   if (hwFilter === 'upcoming') items = items.filter(h => !h.done && new Date(h.date) >= today);
   else if (hwFilter === 'done') items = items.filter(h => h.done);
-  else if (hwFilter === 'overdue') items = items.filter(h => !h.done && new Date(h.date) < today);
-  items.sort((a,b) => new Date(a.date) - new Date(b.date));
+  else items = items.filter(h => !h.done && new Date(h.date) < today);
+  items.sort((a,b) => new Date(a.date)-new Date(b.date));
   const el = document.getElementById('hwList');
-  if (items.length === 0) { el.innerHTML = `<div class="empty-state"><p>Nichts hier 🎉</p></div>`; return; }
-  el.innerHTML = items.map(h => buildHWCard(h)).join('');
+  if (!el) return;
+  el.innerHTML = items.length === 0 ? `<div class="empty-state"><p>Nichts hier 🎉</p></div>` : items.map(h => buildHWCard(h)).join('');
 }
 
 function buildHWCard(h) {
@@ -1104,21 +1122,15 @@ function buildHWCard(h) {
   const dl = Math.ceil((new Date(h.date) - today) / 86400000);
   const dlText = dl < 0 ? `${Math.abs(dl)} Tage überfällig` : dl === 0 ? 'Heute' : dl === 1 ? 'Morgen' : `in ${dl} Tagen`;
   const badge = dl < 0 ? 'badge-danger' : dl <= 1 ? 'badge-danger' : dl <= 3 ? 'badge-warning' : 'badge-accent';
-  const deleteBtn = canEdit() ? `<button style="background:transparent;border:none;color:var(--danger);cursor:pointer;font-size:0.85rem;margin-top:8px;" onclick="deleteItem('${h.id}','hw');event.stopPropagation()">🗑 Löschen</button>` : '';
+  const deleteBtn = canEdit() ? `<button style="background:transparent;border:none;color:var(--danger);cursor:pointer;font-size:0.85rem;margin-top:8px;" onclick="deleteItem('${h.id}');event.stopPropagation()">🗑 Löschen</button>` : '';
   return `<div class="hw-item" id="hwcard-${h.id}" onclick="toggleExpand('${h.id}')">
     <div class="hw-top">
-      <div class="hw-check${h.done ? ' checked' : ''}" onclick="toggleDone('${h.id}','hw');event.stopPropagation()">
+      <div class="hw-check${h.done?' checked':''}" onclick="toggleDone('${h.id}');event.stopPropagation()">
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
       </div>
       <div class="hw-info">
-        <div class="card-row">
-          <div class="hw-title">${h.subject}</div>
-          <span class="badge ${badge}">${dlText}</span>
-        </div>
-        <div class="hw-meta">
-          <span class="badge badge-accent">${h.type}</span>
-          <span style="font-size:0.78rem;color:var(--text-muted);">Bis ${new Date(h.date).toLocaleDateString('de-DE')}</span>
-        </div>
+        <div class="card-row"><div class="hw-title">${h.subject}</div><span class="badge ${badge}">${dlText}</span></div>
+        <div class="hw-meta"><span class="badge badge-accent">${h.type}</span><span style="font-size:0.78rem;color:var(--text-muted);">Bis ${new Date(h.date).toLocaleDateString('de-DE')}</span></div>
       </div>
     </div>
     <div class="hw-expand">${h.desc}${deleteBtn}</div>
@@ -1126,21 +1138,24 @@ function buildHWCard(h) {
 }
 
 function toggleExpand(id) {
-  const el = document.getElementById('hwcard-' + id) || document.getElementById('testcard-' + id);
+  const el = document.getElementById('hwcard-'+id) || document.getElementById('testcard-'+id);
   if (el) el.classList.toggle('expanded');
 }
+window.toggleExpand = toggleExpand;
 
-function toggleDone(id, kind) {
+async function toggleDone(id) {
   const item = homework.find(h => h.id === id);
-  if (item) { item.done = !item.done; saveData(); renderHW(); renderTests(); renderHome(); }
+  if (item) { item.done = !item.done; await saveData(); renderHW(); renderTests(); renderHome(); }
 }
+window.toggleDone = toggleDone;
 
-function deleteItem(id, kind) {
+async function deleteItem(id) {
   homework = homework.filter(h => h.id !== id);
   events = events.filter(e => e.id !== id);
-  saveData();
+  await saveData();
   renderHW(); renderTests(); renderEvents(); renderHome();
 }
+window.deleteItem = deleteItem;
 
 // ════════════════════════════════════════════════
 // TESTS
@@ -1148,38 +1163,31 @@ function deleteItem(id, kind) {
 function setTestFilter(f, el) {
   testFilter = f;
   document.querySelectorAll('#testsPage .filter-tab').forEach(t => t.classList.remove('active'));
-  el.classList.add('active');
-  renderTests();
+  el.classList.add('active'); renderTests();
 }
+window.setTestFilter = setTestFilter;
 
 function renderTests() {
   const today = new Date(); today.setHours(0,0,0,0);
   let items = homework.filter(h => ['Test','Arbeit','Klausur'].includes(h.type));
-  if (testFilter === 'upcoming') items = items.filter(h => new Date(h.date) >= today);
-  else items = items.filter(h => new Date(h.date) < today);
-  items.sort((a,b) => new Date(a.date) - new Date(b.date));
+  items = testFilter === 'upcoming' ? items.filter(h => new Date(h.date) >= today) : items.filter(h => new Date(h.date) < today);
+  items.sort((a,b) => new Date(a.date)-new Date(b.date));
   const el = document.getElementById('testList');
-  if (items.length === 0) { el.innerHTML = `<div class="empty-state"><p>Keine Einträge</p></div>`; return; }
-  el.innerHTML = items.map(h => {
+  if (!el) return;
+  el.innerHTML = items.length === 0 ? `<div class="empty-state"><p>Keine Einträge</p></div>` : items.map(h => {
     const today2 = new Date(); today2.setHours(0,0,0,0);
     const dl = Math.ceil((new Date(h.date) - today2) / 86400000);
     const dlText = dl < 0 ? `vor ${Math.abs(dl)}d` : dl === 0 ? 'Heute!' : `in ${dl}d`;
-    const badge = dl < 0 ? 'badge-accent' : dl <= 1 ? 'badge-danger' : dl <= 3 ? 'badge-warning' : 'badge-accent';
-    const deleteBtn = canEdit() ? `<button style="background:transparent;border:none;color:var(--danger);cursor:pointer;font-size:0.85rem;margin-top:8px;" onclick="deleteItem('${h.id}','tests');event.stopPropagation()">🗑 Löschen</button>` : '';
+    const badge = dl <= 1 ? 'badge-danger' : dl <= 3 ? 'badge-warning' : 'badge-accent';
+    const deleteBtn = canEdit() ? `<button style="background:transparent;border:none;color:var(--danger);cursor:pointer;font-size:0.85rem;margin-top:8px;" onclick="deleteItem('${h.id}');event.stopPropagation()">🗑 Löschen</button>` : '';
     return `<div class="hw-item" id="testcard-${h.id}" onclick="toggleExpand('${h.id}')">
       <div class="hw-top">
-        <div class="hw-check${h.done ? ' checked' : ''}" onclick="toggleDone('${h.id}','tests');event.stopPropagation()">
+        <div class="hw-check${h.done?' checked':''}" onclick="toggleDone('${h.id}');event.stopPropagation()">
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
         </div>
         <div class="hw-info">
-          <div class="card-row">
-            <div class="hw-title">${h.subject}</div>
-            <span class="badge ${badge}">${dlText}</span>
-          </div>
-          <div class="hw-meta">
-            <span class="badge badge-danger">${h.type}</span>
-            <span style="font-size:0.78rem;color:var(--text-muted);">${new Date(h.date).toLocaleDateString('de-DE')}</span>
-          </div>
+          <div class="card-row"><div class="hw-title">${h.subject}</div><span class="badge ${badge}">${dlText}</span></div>
+          <div class="hw-meta"><span class="badge badge-danger">${h.type}</span><span style="font-size:0.78rem;color:var(--text-muted);">${new Date(h.date).toLocaleDateString('de-DE')}</span></div>
         </div>
       </div>
       <div class="hw-expand">${h.desc}${deleteBtn}</div>
@@ -1193,30 +1201,24 @@ function renderTests() {
 function setEventFilter(f, el) {
   eventFilter = f;
   document.querySelectorAll('#eventsPage .filter-tab').forEach(t => t.classList.remove('active'));
-  el.classList.add('active');
-  renderEvents();
+  el.classList.add('active'); renderEvents();
 }
+window.setEventFilter = setEventFilter;
 
 function renderEvents() {
   const today = new Date(); today.setHours(0,0,0,0);
   let items = eventFilter === 'upcoming' ? events.filter(e => new Date(e.date) >= today) : events.filter(e => new Date(e.date) < today);
-  items.sort((a,b) => eventFilter === 'upcoming' ? new Date(a.date) - new Date(b.date) : new Date(b.date) - new Date(a.date));
+  items.sort((a,b) => eventFilter==='upcoming' ? new Date(a.date)-new Date(b.date) : new Date(b.date)-new Date(a.date));
   const el = document.getElementById('eventList');
-  if (items.length === 0) { el.innerHTML = `<div class="empty-state"><p>Keine Ereignisse</p></div>`; return; }
-  el.innerHTML = items.map(e => {
+  if (!el) return;
+  el.innerHTML = items.length === 0 ? `<div class="empty-state"><p>Keine Ereignisse</p></div>` : items.map(e => {
     const d = new Date(e.date);
-    const mon = d.toLocaleDateString('de-DE', {month:'short'}).replace('.','');
-    const deleteBtn = canEdit() ? ` <button style="background:transparent;border:none;color:var(--danger);cursor:pointer;font-size:0.8rem;padding:4px 8px;" onclick="deleteItem('${e.id}','event');event.stopPropagation()">🗑</button>` : '';
+    const mon = d.toLocaleDateString('de-DE',{month:'short'}).replace('.','');
+    const deleteBtn = canEdit() ? `<button style="background:transparent;border:none;color:var(--danger);cursor:pointer;font-size:0.8rem;padding:4px 8px;" onclick="deleteItem('${e.id}');event.stopPropagation()">🗑</button>` : '';
     return `<div class="event-card" onclick="showEventDetail('${e.id}')">
       <div style="display:flex;gap:12px;align-items:center;">
-        <div class="event-date-badge">
-          <div class="event-date-day">${d.getDate()}</div>
-          <div class="event-date-mon">${mon}</div>
-        </div>
-        <div class="event-body">
-          <div style="font-weight:600;font-size:0.92rem;">${e.title}</div>
-          <div style="font-size:0.8rem;color:var(--text-secondary);margin-top:3px;">${e.desc?.slice(0,60)}…</div>
-        </div>
+        <div class="event-date-badge"><div class="event-date-day">${d.getDate()}</div><div class="event-date-mon">${mon}</div></div>
+        <div class="event-body"><div style="font-weight:600;font-size:0.92rem;">${e.title}</div><div style="font-size:0.8rem;color:var(--text-secondary);margin-top:3px;">${(e.desc||'').slice(0,60)}</div></div>
         ${deleteBtn}
       </div>
     </div>`;
@@ -1226,43 +1228,37 @@ function renderEvents() {
 function showEventDetail(id) {
   const e = events.find(x => x.id === id);
   if (!e) return;
-  document.getElementById('itemDetailContent').innerHTML = `
-    <div style="font-size:1.2rem;font-weight:700;margin-bottom:8px;">${e.title}</div>
-    <div style="color:var(--text-muted);font-size:0.85rem;margin-bottom:16px;">📅 ${new Date(e.date).toLocaleDateString('de-DE',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}</div>
-    <div style="line-height:1.7;color:var(--text-secondary);">${e.desc || 'Keine weiteren Details.'}</div>
-  `;
+  document.getElementById('itemDetailContent').innerHTML = `<div style="font-size:1.2rem;font-weight:700;margin-bottom:8px;">${e.title}</div><div style="color:var(--text-muted);font-size:0.85rem;margin-bottom:16px;">📅 ${new Date(e.date).toLocaleDateString('de-DE',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}</div><div style="line-height:1.7;color:var(--text-secondary);">${e.desc||'Keine weiteren Details.'}</div>`;
   openModal('itemDetailOverlay');
 }
+window.showEventDetail = showEventDetail;
 
 // ════════════════════════════════════════════════
-// ADD ITEM MODAL
+// ADD ITEM
 // ════════════════════════════════════════════════
 function openAddModal(type) {
   addingFor = type;
   const titles = { homework:'Hausaufgabe hinzufügen', tests:'Test/Klausur hinzufügen', events:'Ereignis hinzufügen' };
-  document.getElementById('addItemTitle').textContent = titles[type] || 'Eintrag hinzufügen';
+  document.getElementById('addItemTitle').textContent = titles[type];
   document.getElementById('addItemDesc').value = '';
   document.getElementById('addItemSubject').value = '';
   document.getElementById('addItemDate').value = '';
-
   const typeSelect = document.getElementById('addItemType');
-  if (type === 'homework') {
-    typeSelect.innerHTML = '<option value="Hausaufgabe">Hausaufgabe</option><option value="KE">KE</option>';
-  } else if (type === 'tests') {
-    typeSelect.innerHTML = '<option value="Test">Test</option><option value="Arbeit">Arbeit</option><option value="Klausur">Klausur</option>';
-  } else {
-    typeSelect.innerHTML = '<option value="Ereignis">Ereignis</option>';
-  }
+  if (type === 'homework') typeSelect.innerHTML = '<option value="Hausaufgabe">Hausaufgabe</option><option value="KE">KE</option>';
+  else if (type === 'tests') typeSelect.innerHTML = '<option value="Test">Test</option><option value="Arbeit">Arbeit</option><option value="Klausur">Klausur</option>';
+  else typeSelect.innerHTML = '<option value="Ereignis">Ereignis</option>';
   document.getElementById('addEventDescGroup').style.display = type === 'events' ? 'block' : 'none';
   openModal('addItemOverlay');
 }
+window.openAddModal = openAddModal;
 
 function setNextWeek() {
   const d = new Date(); d.setDate(d.getDate() + 7);
   document.getElementById('addItemDate').value = d.toISOString().split('T')[0];
 }
+window.setNextWeek = setNextWeek;
 
-function saveNewItem() {
+async function saveNewItem() {
   const desc = document.getElementById('addItemDesc').value.trim();
   const subj = document.getElementById('addItemSubject').value.trim();
   const date = document.getElementById('addItemDate').value;
@@ -1270,37 +1266,38 @@ function saveNewItem() {
   if (!desc || !date) return alert('Bitte alle Pflichtfelder ausfüllen.');
   if (addingFor === 'events') {
     const evDesc = document.getElementById('addEventDesc').value.trim();
-    events.push({ id: uid(), title: desc, desc: evDesc || desc, date, createdBy: currentUser.email });
+    events.push({ id: uid(), title: desc, desc: evDesc||desc, date, createdBy: currentUser.email });
   } else {
-    homework.push({ id: uid(), type, subject: subj || 'Allgemein', desc, date, done: false, createdBy: currentUser.email });
+    homework.push({ id: uid(), type, subject: subj||'Allgemein', desc, date, done: false, createdBy: currentUser.email });
   }
-  saveData();
+  await saveData();
   closeModal('addItemOverlay');
   if (addingFor === 'homework') renderHW();
   else if (addingFor === 'tests') renderTests();
   else renderEvents();
   renderHome();
 }
+window.saveNewItem = saveNewItem;
 
 // ════════════════════════════════════════════════
 // CHAT
 // ════════════════════════════════════════════════
 function renderChatList() {
   const el = document.getElementById('chatListItems');
+  if (!el) return;
   const myChats = Object.values(chats).filter(c => c.members?.includes(currentUser.email) || c.id === 'class');
-  const newChatBtn = `<div style="padding:12px 16px;"><button class="btn btn-secondary" onclick="openNewChat()" style="font-size:0.82rem;">+ Neuer Chat / Gruppe</button></div><div class="divider" style="margin:0;"></div>`;
-  if (myChats.length === 0) { el.innerHTML = newChatBtn + `<div class="empty-state"><p>Noch keine Chats</p></div>`; return; }
-  el.innerHTML = newChatBtn + myChats.map(c => {
-    const lastMsg = c.messages?.[c.messages.length - 1];
+  const newBtn = `<div style="padding:12px 16px;"><button class="btn btn-secondary" onclick="openNewChat()" style="font-size:0.82rem;">+ Neuer Chat / Gruppe</button></div><div class="divider" style="margin:0;"></div>`;
+  if (!myChats.length) { el.innerHTML = newBtn + `<div class="empty-state"><p>Noch keine Chats</p></div>`; return; }
+  el.innerHTML = newBtn + myChats.map(c => {
+    const lastMsg = c.messages?.[c.messages.length-1];
     const name = c.name || getOtherUser(c)?.name || 'Chat';
-    const preview = lastMsg ? (lastMsg.sender === 'system' ? lastMsg.text : (lastMsg.text || '')) : 'Kein Nachrichten';
+    const preview = lastMsg ? lastMsg.text : 'Keine Nachrichten';
     const ts = lastMsg ? formatChatTime(lastMsg.ts) : '';
-    const initials = name[0]?.toUpperCase() || '?';
     return `<div class="chat-list-item" onclick="openChat('${c.id}')">
-      <div class="chat-avatar">${initials}</div>
+      <div class="chat-avatar">${name[0]?.toUpperCase()}</div>
       <div style="flex:1;min-width:0;">
         <div style="display:flex;justify-content:space-between;">
-          <span class="chat-name">${name}${c.id === 'class' ? ' <span class="badge badge-accent" style="font-size:0.65rem;">Klasse</span>' : ''}</span>
+          <span class="chat-name">${name}${c.id==='class'?' <span class="badge badge-accent" style="font-size:0.65rem;">Klasse</span>':''}</span>
           <span class="chat-meta">${ts}</span>
         </div>
         <div class="chat-preview">${preview.slice(0,60)}</div>
@@ -1316,10 +1313,9 @@ function getOtherUser(chat) {
 
 function formatChatTime(ts) {
   if (!ts) return '';
-  const d = new Date(ts);
-  const now = new Date();
-  if (d.toDateString() === now.toDateString()) return d.toLocaleTimeString('de-DE', {hour:'2-digit',minute:'2-digit'});
-  return d.toLocaleDateString('de-DE', {day:'2-digit',month:'2-digit'});
+  const d = new Date(ts), now = new Date();
+  if (d.toDateString() === now.toDateString()) return d.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+  return d.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'});
 }
 
 function openChat(chatId) {
@@ -1328,33 +1324,19 @@ function openChat(chatId) {
   const isGroup = chat.type === 'group' || chatId === 'class';
   const name = chat.name || getOtherUser(chat)?.name || 'Chat';
   document.getElementById('chatViewName').textContent = name;
-  document.getElementById('chatViewSub').textContent = isGroup ? `${chat.members?.length || 1} Mitglieder` : 'Direktnachricht';
+  document.getElementById('chatViewSub').textContent = isGroup ? `${chat.members?.length||1} Mitglieder` : 'Direktnachricht';
   document.getElementById('chatViewAvatar').textContent = name[0]?.toUpperCase();
   document.getElementById('chatListView').style.display = 'none';
   document.getElementById('chatView').classList.add('active');
-
-  // Admin controls for class chat
   const adminCtrl = document.getElementById('chatAdminControls');
-  adminCtrl.innerHTML = '';
-  if (currentUser.isAdmin && chatId === 'class') {
-    adminCtrl.innerHTML = `<button class="icon-btn" onclick="openMuteControls()" title="Chat verwalten">⚙️</button>`;
-  }
-
-  // Check if user is muted
+  adminCtrl.innerHTML = currentUser.isAdmin && chatId === 'class' ? `<button class="icon-btn" onclick="openMuteControls()" title="Chat verwalten">⚙️</button>` : '';
   const muted = chat.mutedUsers?.includes(currentUser.email);
-  const inputArea = document.getElementById('chatInputArea');
-  if (muted) {
-    inputArea.innerHTML = `<div class="chat-disabled-note" style="padding:14px;">Du wurdest vom Admin stummgeschaltet und kannst gerade nicht schreiben.</div>`;
-  } else {
-    inputArea.innerHTML = `<div class="chat-input-wrap">
-      <input class="chat-input" type="text" id="chatMsgInput" placeholder="Nachricht schreiben…" onkeydown="if(event.key==='Enter')sendMessage()">
-      <button class="chat-send-btn" onclick="sendMessage()">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-      </button>
-    </div>`;
-  }
+  document.getElementById('chatInputArea').innerHTML = muted
+    ? `<div class="chat-disabled-note" style="padding:14px;">Du wurdest vom Admin stummgeschaltet.</div>`
+    : `<div class="chat-input-wrap"><input class="chat-input" type="text" id="chatMsgInput" placeholder="Nachricht schreiben…" onkeydown="if(event.key==='Enter')sendMessage()"><button class="chat-send-btn" onclick="sendMessage()"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button></div>`;
   renderMessages();
 }
+window.openChat = openChat;
 
 function closeChatView() {
   document.getElementById('chatView').classList.remove('active');
@@ -1362,111 +1344,94 @@ function closeChatView() {
   currentChatId = null;
   renderChatList();
 }
+window.closeChatView = closeChatView;
 
 function renderMessages() {
   const chat = chats[currentChatId];
   const el = document.getElementById('chatMessages');
-  if (!chat?.messages?.length) { el.innerHTML = `<div class="empty-state"><p>Keine Nachrichten</p></div>`; return; }
+  if (!el || !chat?.messages?.length) { if(el) el.innerHTML = `<div class="empty-state"><p>Keine Nachrichten</p></div>`; return; }
   el.innerHTML = chat.messages.map(m => {
     if (m.sender === 'system') return `<div style="text-align:center;font-size:0.78rem;color:var(--text-muted);padding:6px 0;">${m.text}</div>`;
     const mine = m.sender === currentUser.email;
     const sender = users[m.sender];
-    const senderName = sender?.name || m.sender;
-    return `<div class="msg-bubble ${mine ? 'mine' : 'theirs'}">
-      ${!mine && chat.type === 'group' ? `<div class="msg-sender">${senderName}${sender?.isAdmin ? ' 👑' : ''}</div>` : ''}
-      ${m.text}
-      <div class="msg-time">${formatChatTime(m.ts)}</div>
+    return `<div class="msg-bubble ${mine?'mine':'theirs'}">
+      ${!mine && chat.type==='group' ? `<div class="msg-sender">${sender?.name||m.sender}${sender?.isAdmin?' 👑':''}</div>` : ''}
+      ${m.text}<div class="msg-time">${formatChatTime(m.ts)}</div>
     </div>`;
   }).join('');
   el.scrollTop = el.scrollHeight;
 }
 
-function sendMessage() {
+async function sendMessage() {
   const input = document.getElementById('chatMsgInput');
   if (!input) return;
   const text = input.value.trim();
   if (!text || !currentChatId) return;
-  const chat = chats[currentChatId];
-  if (!chat.messages) chat.messages = [];
-  chat.messages.push({ id: uid(), sender: currentUser.email, text, ts: Date.now() });
+  if (!chats[currentChatId].messages) chats[currentChatId].messages = [];
+  chats[currentChatId].messages.push({ id: uid(), sender: currentUser.email, text, ts: Date.now() });
   input.value = '';
-  saveData();
+  await saveData();
   renderMessages();
 }
+window.sendMessage = sendMessage;
 
 function openNewChat() {
   const others = Object.values(users).filter(u => u.email !== currentUser.email);
-  const el = document.getElementById('newChatUserList');
-  el.innerHTML = others.length === 0 ? '<p style="color:var(--text-muted);font-size:0.85rem;">Noch keine anderen Nutzer registriert.</p>' :
-    others.map(u => `<div class="chat-list-item" onclick="startDirectChat('${u.email}')" style="cursor:pointer;">
-      <div class="chat-avatar">${u.name[0].toUpperCase()}</div>
-      <div><div class="chat-name">${u.name}</div><div class="chat-preview">${u.isAdmin ? '👑 Admin' : 'Schüler'}</div></div>
-    </div>`).join('');
+  document.getElementById('newChatUserList').innerHTML = others.length === 0 ? '<p style="color:var(--text-muted);font-size:0.85rem;">Noch keine anderen Nutzer.</p>' :
+    others.map(u => `<div class="chat-list-item" onclick="startDirectChat('${u.email}')" style="cursor:pointer;"><div class="chat-avatar">${u.name[0].toUpperCase()}</div><div><div class="chat-name">${u.name}</div><div class="chat-preview">${u.isAdmin?'👑 Admin':'Schüler'}</div></div></div>`).join('');
   openModal('newChatOverlay');
 }
+window.openNewChat = openNewChat;
 
-function startDirectChat(userEmail) {
-  const existingId = Object.keys(chats).find(id => {
-    const c = chats[id];
-    return c.type === 'dm' && c.members?.includes(currentUser.email) && c.members?.includes(userEmail);
-  });
+async function startDirectChat(userEmail) {
+  const existingId = Object.keys(chats).find(id => { const c=chats[id]; return c.type==='dm' && c.members?.includes(currentUser.email) && c.members?.includes(userEmail); });
   closeModal('newChatOverlay');
   if (existingId) { openChat(existingId); return; }
   const id = uid();
   chats[id] = { id, type: 'dm', members: [currentUser.email, userEmail], messages: [], mutedUsers: [] };
-  saveData();
+  await saveData();
   goTo('chat');
   openChat(id);
 }
+window.startDirectChat = startDirectChat;
 
 function openNewGroupModal() {
   closeModal('newChatOverlay');
   const others = Object.values(users).filter(u => u.email !== currentUser.email);
-  document.getElementById('groupMemberList').innerHTML = others.map(u => `
-    <label style="display:flex;align-items:center;gap:10px;padding:8px 0;cursor:pointer;">
-      <input type="checkbox" value="${u.email}" style="accent-color:var(--accent);">
-      <span>${u.name}</span>
-    </label>`).join('');
+  document.getElementById('groupMemberList').innerHTML = others.map(u => `<label style="display:flex;align-items:center;gap:10px;padding:8px 0;cursor:pointer;"><input type="checkbox" value="${u.email}" style="accent-color:var(--accent);"><span>${u.name}</span></label>`).join('');
   openModal('newGroupOverlay');
 }
+window.openNewGroupModal = openNewGroupModal;
 
-function createGroup() {
+async function createGroup() {
   const name = document.getElementById('groupName').value.trim();
   if (!name) return alert('Bitte einen Gruppennamen eingeben.');
   const checked = [...document.querySelectorAll('#groupMemberList input:checked')].map(i => i.value);
-  const members = [currentUser.email, ...checked];
   const id = uid();
-  chats[id] = { id, type: 'group', name, members, messages: [{ id: uid(), sender: 'system', text: `Gruppe "${name}" wurde erstellt.`, ts: Date.now() }], mutedUsers: [] };
-  saveData();
+  chats[id] = { id, type: 'group', name, members: [currentUser.email, ...checked], messages: [{ id: uid(), sender: 'system', text: `Gruppe "${name}" wurde erstellt.`, ts: Date.now() }], mutedUsers: [] };
+  await saveData();
   closeModal('newGroupOverlay');
   goTo('chat');
   openChat(id);
 }
+window.createGroup = createGroup;
 
 function openMuteControls() {
   const chat = chats['class'];
   const members = chat.members?.map(e => users[e]).filter(Boolean) || [];
-  const el = document.getElementById('adminSettingsSection');
-  // repurpose settings modal
-  document.getElementById('settingsOverlay').classList.remove('hidden');
-  el.innerHTML = `<div class="admin-section">
-    <h4>🔇 CHAT-VERWALTUNG – Klassenchat</h4>
-    ${members.filter(u => u.email !== currentUser.email).map(u => `
-      <div class="admin-user-row">
-        <span class="admin-user-name">${u.name}</span>
-        <label class="toggle"><input type="checkbox" ${!chat.mutedUsers?.includes(u.email) ? 'checked' : ''} onchange="toggleMute('${u.email}',this.checked)"><span class="toggle-slider"></span></label>
-      </div>
-    `).join('')}
-  </div>`;
+  document.getElementById('adminSettingsSection').innerHTML = `<div class="admin-section"><h4>🔇 CHAT-VERWALTUNG</h4>${members.filter(u=>u.email!==currentUser.email).map(u=>`<div class="admin-user-row"><span class="admin-user-name">${u.name}</span><label class="toggle"><input type="checkbox" ${!chat.mutedUsers?.includes(u.email)?'checked':''} onchange="toggleMute('${u.email}',this.checked)"><span class="toggle-slider"></span></label></div>`).join('')}</div>`;
+  openModal('settingsOverlay');
 }
+window.openMuteControls = openMuteControls;
 
-function toggleMute(email, canChat) {
+async function toggleMute(email, canChat) {
   const chat = chats['class'];
   if (!chat.mutedUsers) chat.mutedUsers = [];
   if (canChat) chat.mutedUsers = chat.mutedUsers.filter(e => e !== email);
   else if (!chat.mutedUsers.includes(email)) chat.mutedUsers.push(email);
-  saveData();
+  await saveData();
 }
+window.toggleMute = toggleMute;
 
 // ════════════════════════════════════════════════
 // SETTINGS
@@ -1476,57 +1441,50 @@ function openSettings() {
   document.getElementById('settingsEmail').value = currentUser.email;
   const prev = document.getElementById('settingsPhotoPreview');
   if (currentUser.photo) prev.innerHTML = `<img src="${currentUser.photo}">`;
-  else prev.textContent = currentUser.name?.[0]?.toUpperCase() || '?';
-
+  else prev.textContent = currentUser.name?.[0]?.toUpperCase()||'?';
   const adminSection = document.getElementById('adminSettingsSection');
   if (currentUser.isAdmin) {
     const others = Object.values(users).filter(u => u.email !== currentUser.email);
-    adminSection.innerHTML = `<div class="admin-section">
-      <h4>👑 ADMIN – Berechtigungen</h4>
-      <p style="font-size:0.78rem;color:var(--text-muted);margin-bottom:10px;">Erlaube Mitschülern, Einträge hinzuzufügen</p>
-      ${others.map(u => `<div class="admin-user-row">
-        <span class="admin-user-name">${u.name}</span>
-        <label class="toggle"><input type="checkbox" ${u.canPost ? 'checked' : ''} onchange="toggleCanPost('${u.email}',this.checked)"><span class="toggle-slider"></span></label>
-      </div>`).join('')}
-    </div>`;
-  } else {
-    adminSection.innerHTML = '';
-  }
+    adminSection.innerHTML = `<div class="admin-section"><h4>👑 ADMIN – Berechtigungen</h4><p style="font-size:0.78rem;color:var(--text-muted);margin-bottom:10px;">Erlaube Mitschülern, Einträge hinzuzufügen</p>${others.map(u=>`<div class="admin-user-row"><span class="admin-user-name">${u.name}</span><label class="toggle"><input type="checkbox" ${u.canPost?'checked':''} onchange="toggleCanPost('${u.email}',this.checked)"><span class="toggle-slider"></span></label></div>`).join('')}</div>`;
+  } else adminSection.innerHTML = '';
   openModal('settingsOverlay');
 }
+window.openSettings = openSettings;
 
-function toggleCanPost(email, val) {
-  if (users[email]) { users[email].canPost = val; saveData(); }
+async function toggleCanPost(email, val) {
+  if (users[email]) { users[email].canPost = val; await saveData(); }
 }
+window.toggleCanPost = toggleCanPost;
 
 function triggerPhotoUpload() { document.getElementById('photoInput').click(); }
+window.triggerPhotoUpload = triggerPhotoUpload;
 
-function handlePhotoUpload(e) {
+async function handlePhotoUpload(e) {
   const file = e.target.files[0];
   if (!file) return;
   const reader = new FileReader();
-  reader.onload = (ev) => {
-    const data = ev.target.result;
-    currentUser.photo = data;
+  reader.onload = async (ev) => {
+    currentUser.photo = ev.target.result;
     users[currentUser.email] = currentUser;
-    saveData();
+    await saveData();
     const prev = document.getElementById('settingsPhotoPreview');
-    prev.innerHTML = `<img src="${data}">`;
+    prev.innerHTML = `<img src="${ev.target.result}">`;
     updateAvatar();
   };
   reader.readAsDataURL(file);
 }
+window.handlePhotoUpload = handlePhotoUpload;
 
-function saveSettings() {
+async function saveSettings() {
   const name = document.getElementById('settingsName').value.trim();
   if (!name) return alert('Name darf nicht leer sein.');
   currentUser.name = name;
   users[currentUser.email] = currentUser;
-  saveData();
+  await saveData();
   updateAvatar();
   closeModal('settingsOverlay');
-  document.getElementById('homeGreeting').textContent = `Hallo, ${name}! ${currentUser.isAdmin ? '👑 Admin' : ''}`;
 }
+window.saveSettings = saveSettings;
 
 // ════════════════════════════════════════════════
 // MODAL HELPERS
@@ -1534,16 +1492,9 @@ function saveSettings() {
 function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
 function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
 function closeIfBackdrop(e, id) { if (e.target.id === id) closeModal(id); }
-
-// ════════════════════════════════════════════════
-// AUTO-LOGIN
-// ════════════════════════════════════════════════
-(function() {
-  const session = DB.get('hlg_session');
-  if (session && users[session]) {
-    loginSuccess(users[session]);
-  }
-})();
+window.openModal = openModal;
+window.closeModal = closeModal;
+window.closeIfBackdrop = closeIfBackdrop;
 </script>
 </body>
 </html>
