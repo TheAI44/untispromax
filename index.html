@@ -654,6 +654,7 @@ let ttData = null, ttWeekOffset = 0;
 let selectedDayIdx = new Date().getDay() === 0 ? 4 : (new Date().getDay() === 6 ? 4 : new Date().getDay() - 1);
 let replyingTo = null;
 let addItemFiles = [];
+let timetables = {};
 const SERVER_URL = 'https://untispromax-server-1.onrender.com';
 let notifSettings = JSON.parse(localStorage.getItem('notifSettings') || '{"all":false,"chat":false,"hw24":false}');
 // Timetable cache for fast loading
@@ -667,19 +668,21 @@ async function fbGet(id) { const s = await getDoc(doc(db,'appdata',id)); return 
 async function fbSet(id, v) { await setDoc(doc(db,'appdata',id), {value: v}); }
 
 async function loadAllData() {
-  const [hw,ev,us,ch,wi,rec] = await Promise.all([fbGet('homework'),fbGet('events'),fbGet('users'),fbGet('chats'),fbGet('wishes'),fbGet('recovery')]);
+  const [hw,ev,us,ch,wi,rec,tt] = await Promise.all([fbGet('homework'),fbGet('events'),fbGet('users'),fbGet('chats'),fbGet('wishes'),fbGet('recovery'),fbGet('timetables')]);
   homework = hw || getSampleHW(); events = ev || getSampleEvents();
   users = us || {}; chats = ch || {}; wishes = wi || []; recoveryEntries = rec || {};
+  timetables = tt || {};
   if (!hw) await fbSet('homework', homework);
   if (!ev) await fbSet('events', events);
   if (!us) await fbSet('users', users);
   if (!ch) await fbSet('chats', chats);
   if (!wi) await fbSet('wishes', wishes);
   if (!rec) await fbSet('recovery', recoveryEntries);
+  if (!tt) await fbSet('timetables', timetables);
 }
 
 async function saveData() {
-  await Promise.all([fbSet('homework',homework),fbSet('events',events),fbSet('users',users),fbSet('chats',chats),fbSet('wishes',wishes)]);
+  await Promise.all([fbSet('homework',homework),fbSet('events',events),fbSet('users',users),fbSet('chats',chats),fbSet('wishes',wishes),fbSet('timetables',timetables)]);
 }
 
 function startRealtimeListeners() {
@@ -688,6 +691,7 @@ function startRealtimeListeners() {
   onSnapshot(doc(db,'appdata','events'), s => { if(s.exists()){events=s.data().value||[]; if(currentPage==='events')renderEvents(); if(currentPage==='home')renderHome();} });
   onSnapshot(doc(db,'appdata','users'), s => { if(s.exists())users=s.data().value||{}; });
   onSnapshot(doc(db,'appdata','recovery'), s => { if(s.exists()){recoveryEntries=s.data().value||{}; if(currentPage==='recovery')renderRecovery();} });
+  onSnapshot(doc(db,'appdata','timetables'), s => { if(s.exists()){timetables=s.data().value||{}; if(currentPage==='recovery')renderRecovery();} });
   onSnapshot(doc(db,'appdata','wishes'), s => {
     if(s.exists()){
       wishes=s.data().value||[];
@@ -896,13 +900,48 @@ function initApp() {
 // Preload timetable in background for faster display
 function preloadTimetable() {
   setTimeout(async ()=>{
-    const cacheKey='week_0';
-    const cachedData=ttCache[cacheKey];
-    const cacheAge=cachedData ? (Date.now()-ttCacheTime[cacheKey])/1000 : null;
-    // Only preload if no cache or cache is older than 30 minutes
-    if(!cachedData || !cacheAge || cacheAge > 1800){
-      ttWeekOffset=0;
-      await fetchTimetableFromServer(2);
+    try {
+      // Load current week (offset 0)
+      const cacheKey0='week_0';
+      const cachedData0=ttCache[cacheKey0];
+      const cacheAge0=cachedData0 ? (Date.now()-ttCacheTime[cacheKey0])/1000 : null;
+      
+      if(!cachedData0 || !cacheAge0 || cacheAge0 > 1800){
+        const res = await fetch(`${SERVER_URL}/timetable?offset=0`,{signal:AbortSignal.timeout(8000)});
+        if(res.ok){
+          const data = await res.json();
+          ttCache[cacheKey0]=data;
+          ttCacheTime[cacheKey0]=Date.now();
+          localStorage.setItem('ttCache',JSON.stringify(ttCache));
+          localStorage.setItem('ttCacheTime',JSON.stringify(ttCacheTime));
+          // Save to Firestore
+          const weekMonday = data.week.monday;
+          timetables[weekMonday] = data;
+          await fbSet('timetables', timetables);
+        }
+      }
+      
+      // Load next week (offset 1) as well
+      const cacheKey1='week_1';
+      const cachedData1=ttCache[cacheKey1];
+      const cacheAge1=cachedData1 ? (Date.now()-ttCacheTime[cacheKey1])/1000 : null;
+      
+      if(!cachedData1 || !cacheAge1 || cacheAge1 > 1800){
+        const res = await fetch(`${SERVER_URL}/timetable?offset=1`,{signal:AbortSignal.timeout(8000)});
+        if(res.ok){
+          const data = await res.json();
+          ttCache[cacheKey1]=data;
+          ttCacheTime[cacheKey1]=Date.now();
+          localStorage.setItem('ttCache',JSON.stringify(ttCache));
+          localStorage.setItem('ttCacheTime',JSON.stringify(ttCacheTime));
+          // Save to Firestore
+          const weekMonday = data.week.monday;
+          timetables[weekMonday] = data;
+          await fbSet('timetables', timetables);
+        }
+      }
+    } catch(err) {
+      // Silent fail - preload is just optimization
     }
   }, 2000); // Delay 2s to let home page render first
 }
@@ -1037,9 +1076,10 @@ async function fetchTimetableFromServer(maxRetries){
       ttCacheTime[cacheKey]=Date.now();
       localStorage.setItem('ttCache',JSON.stringify(ttCache));
       localStorage.setItem('ttCacheTime',JSON.stringify(ttCacheTime));
-      // Also save individual week data for recovery page
+      // Save to Firestore with week date as key
       const weekMonday = ttData.week.monday;
-      localStorage.setItem(`tt_week_${weekMonday}`, JSON.stringify(ttData));
+      timetables[weekMonday] = ttData;
+      await fbSet('timetables', timetables);
       updateWeekHeader();
       renderDayLessons(selectedDayIdx);
       updateNavButtons();
@@ -1069,9 +1109,10 @@ async function refreshTimetableBackground(){
       ttCacheTime[cacheKey]=Date.now();
       localStorage.setItem('ttCache',JSON.stringify(ttCache));
       localStorage.setItem('ttCacheTime',JSON.stringify(ttCacheTime));
-      // Also save individual week data for recovery page
+      // Also save to Firestore for recovery page
       const weekMonday = freshData.week.monday;
-      localStorage.setItem(`tt_week_${weekMonday}`, JSON.stringify(freshData));
+      timetables[weekMonday] = freshData;
+      await fbSet('timetables', timetables);
       // Only update if current week still matches
       if(ttWeekOffset===0){
         ttData=freshData;
@@ -1307,28 +1348,23 @@ async function loadRecoveryTimetable(dateKey, dayIdx) {
   const monday = new Date(d.setDate(diff));
   const mondayStr = monday.toISOString().split('T')[0];
   
-  // Try to load from localStorage
-  const savedTimetable = localStorage.getItem(`tt_week_${mondayStr}`);
-  if(savedTimetable) {
-    try {
-      const data = JSON.parse(savedTimetable);
-      const lessons = data.days?.[dayIdx] || [];
-      displayRecoveryTimetable(container, lessons, dateKey, true);
-      return;
-    } catch(err) {
-      // If parsing fails, continue
-    }
+  // Try to load from Firestore timetables
+  if(timetables[mondayStr]) {
+    const data = timetables[mondayStr];
+    const lessons = data.days?.[dayIdx] || [];
+    displayRecoveryTimetable(container, lessons, dateKey, true);
+    return;
   }
   
   // No data available - show loading message
-  container.innerHTML = `<div class="empty-state" style="padding:16px 0;color:var(--text-muted);"><p>📋 Daten noch nicht geladen</p><p style="font-size:0.75rem;margin-top:4px;">Der Stundenplan wird gespeichert wenn du die Plan-Seite besuchst.</p></div>`;
+  container.innerHTML = `<div class="empty-state" style="padding:16px 0;color:var(--text-muted);"><p>📋 Daten noch nicht geladen</p><p style="font-size:0.75rem;margin-top:4px;">Der Stundenplan wird automatisch gespeichert.</p></div>`;
 }
 window.loadRecoveryTimetable=loadRecoveryTimetable;
 
 function displayRecoveryTimetable(container, lessons, dateKey, hasData=false) {
   if(!lessons || !Array.isArray(lessons) || lessons.length === 0) {
     if(!hasData) {
-      container.innerHTML = `<div class="empty-state" style="padding:16px 0;color:var(--text-muted);"><p>📋 Daten noch nicht geladen</p><p style="font-size:0.75rem;margin-top:4px;">Der Stundenplan wird gespeichert wenn du die Plan-Seite besuchst.</p></div>`;
+      container.innerHTML = `<div class="empty-state" style="padding:16px 0;color:var(--text-muted);"><p>📋 Daten noch nicht geladen</p><p style="font-size:0.75rem;margin-top:4px;">Der Stundenplan wird automatisch gespeichert.</p></div>`;
     } else {
       container.innerHTML = `<div class="lesson-card holiday"><div style="flex:1;"><div class="lesson-subject" style="color:var(--success)">🎉 Kein Unterricht</div><div class="lesson-room" style="font-size:0.75rem;">An diesem Tag war kein Unterricht</div></div></div>`;
     }
