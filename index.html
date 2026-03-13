@@ -2270,8 +2270,8 @@ function openChat(chatId){
   const muted=chat.mutedUsers?.includes(currentUser.email);
   document.getElementById('chatInputArea').innerHTML=muted
     ?`<div class="chat-disabled-note">Du wurdest stummgeschaltet.</div>`
-    :`<div style="position:fixed;bottom:0;left:0;right:0;z-index:120;background:rgba(4,13,26,0.98);padding:8px 16px;border-top:1px solid var(--border);">
-        <div id="chatFilePreview" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;"></div>
+    :`<div style="position:fixed;bottom:0;left:0;right:0;z-index:120;background:rgba(4,13,26,0.98);padding:8px 16px;border-top:1px solid var(--border);display:flex;flex-direction:column;max-height:40vh;">
+        <div id="chatFilePreview" style="display:flex;gap:6px;flex-wrap:wrap;overflow-y:auto;margin-bottom:8px;max-height:120px;"></div>
         <div class="chat-input-wrap">
           <input type="file" id="chatFileInput" style="display:none;" accept="image/*,.pdf,.doc,.docx" multiple onchange="handleChatFile(event)">
           <button class="chat-attach-btn" onclick="document.getElementById('chatFileInput').click()" title="Anhang">📎</button>
@@ -2297,9 +2297,10 @@ function renderMessages(){
     const replyHtml=m.replyTo?`<div class="msg-reply-ref">↩️ ${m.replyTo.slice(0,50)}</div>`:'';
     const imgHtml=m.image?`<img class="msg-img" src="${m.image}" onclick="window.open('${m.image}','_blank')" alt="Bild">`:'';
     const fileHtml=m.file?`<a class="msg-file" href="${m.file.data}" download="${m.file.name}">📎 ${m.file.name}</a>`:'';
-    return `<div class="msg-bubble ${mine?'mine':'theirs'}" ondblclick="setReply('${m.id}','${(m.text||'[Anhang]').replace(/'/g,"\\'")}')">
+    const filesHtml=m.files?m.files.map(f=>f.type.startsWith('image/')?`<img class="msg-img" src="${f.data}" onclick="window.open('${f.data}','_blank')" alt="Bild">` : `<a class="msg-file" href="${f.data}" download="${f.name}">📎 ${f.name}</a>`).join(''):'';
+    return `<div class="msg-bubble ${mine?'mine':'theirs'}" ondblclick="setReply('${m.id}','${(m.text||'[Anhang]').replace(/'/g,"\\'")}')">";
       ${!mine&&(chat.type==='group'||chat.id==='class')?`<div class="msg-sender">${senderName}${sender?.isAdmin?' 👑':''}</div>`:''}
-      ${replyHtml}${imgHtml}${fileHtml}
+      ${replyHtml}${imgHtml}${fileHtml}${filesHtml}
       ${m.text?m.text:''}
       <div class="msg-time">${formatChatTime(m.ts)}</div>
     </div>`;
@@ -2324,25 +2325,15 @@ async function sendMessage(){
   if(!text&&chatUploadFiles.length===0)return;
   if(!chats[currentChatId].messages)chats[currentChatId].messages=[];
   
-  // Send one message per file or one message with text
-  if(chatUploadFiles.length>0){
-    for(let file of chatUploadFiles){
-      const msg={id:uid(),sender:currentUser.email,ts:Date.now()};
-      if(file.type.startsWith('image/'))msg.image=file.data;
-      else msg.file={name:file.name,data:file.data};
-      if(!text&&chatUploadFiles.indexOf(file)===0&&replyingTo)msg.replyTo=replyingTo.preview;
-      chats[currentChatId].messages.push(msg);
-    }
-    chatUploadFiles=[];
-    updateChatFilePreview();
-  }
+  // Combine text and files in ONE message
+  const msg={id:uid(),sender:currentUser.email,ts:Date.now()};
+  if(text)msg.text=text;
+  if(chatUploadFiles.length>0)msg.files=chatUploadFiles.map(f=>({name:f.name,data:f.data,type:f.type}));
+  if(replyingTo)msg.replyTo=replyingTo.preview;
   
-  if(text){
-    const msg={id:uid(),sender:currentUser.email,text,ts:Date.now()};
-    if(replyingTo)msg.replyTo=replyingTo.preview;
-    chats[currentChatId].messages.push(msg);
-  }
-  
+  chats[currentChatId].messages.push(msg);
+  chatUploadFiles=[];
+  updateChatFilePreview();
   input.value=''; cancelReply();
   await saveData(); renderMessages();
 }
