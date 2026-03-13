@@ -1032,11 +1032,14 @@ async function fetchTimetableFromServer(maxRetries){
       const res=await fetch(`${SERVER_URL}/timetable?offset=${ttWeekOffset}`,{signal:AbortSignal.timeout(8000)});
       if(!res.ok)throw new Error(`Server Fehler (${res.status})`);
       ttData=await res.json();
-      // Cache the data
+      // Cache the data locally
       ttCache[cacheKey]=ttData;
       ttCacheTime[cacheKey]=Date.now();
       localStorage.setItem('ttCache',JSON.stringify(ttCache));
       localStorage.setItem('ttCacheTime',JSON.stringify(ttCacheTime));
+      // Also save individual week data for recovery page
+      const weekMonday = ttData.week.monday;
+      localStorage.setItem(`tt_week_${weekMonday}`, JSON.stringify(ttData));
       updateWeekHeader();
       renderDayLessons(selectedDayIdx);
       updateNavButtons();
@@ -1066,6 +1069,9 @@ async function refreshTimetableBackground(){
       ttCacheTime[cacheKey]=Date.now();
       localStorage.setItem('ttCache',JSON.stringify(ttCache));
       localStorage.setItem('ttCacheTime',JSON.stringify(ttCacheTime));
+      // Also save individual week data for recovery page
+      const weekMonday = freshData.week.monday;
+      localStorage.setItem(`tt_week_${weekMonday}`, JSON.stringify(freshData));
       // Only update if current week still matches
       if(ttWeekOffset===0){
         ttData=freshData;
@@ -1294,40 +1300,38 @@ async function loadRecoveryTimetable(dateKey, dayIdx) {
   const container = document.getElementById('recoveryTimetableContainer');
   if(!container) return;
   
-  // Determine week offset (0 = current week)
-  const today = new Date();
+  // Get the monday of the week containing this date
   const d = new Date(dateKey);
-  const weekDiff = Math.floor((d - today) / (7 * 24 * 60 * 60 * 1000));
-  let weekOffset = 0;
-  if(weekDiff <= 0) weekOffset = 0;
-  else if(weekDiff > 0 && weekDiff < 7) weekOffset = 1;
-  else return; // Too far away
+  const dayOfWeek = d.getDay();
+  const diff = d.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+  const monday = new Date(d.setDate(diff));
+  const mondayStr = monday.toISOString().split('T')[0];
   
-  // Check cache first
-  const cacheKey = `week_${weekOffset}`;
-  if(ttCache[cacheKey]) {
-    const lessons = ttCache[cacheKey].days?.[dayIdx] || [];
-    displayRecoveryTimetable(container, lessons, dateKey);
-    return;
-  }
-  
-  // Fetch from server
-  try {
-    const res = await fetch(`${SERVER_URL}/timetable?offset=${weekOffset}`, {signal: AbortSignal.timeout(8000)});
-    if(res.ok) {
-      const data = await res.json();
+  // Try to load from localStorage
+  const savedTimetable = localStorage.getItem(`tt_week_${mondayStr}`);
+  if(savedTimetable) {
+    try {
+      const data = JSON.parse(savedTimetable);
       const lessons = data.days?.[dayIdx] || [];
-      displayRecoveryTimetable(container, lessons, dateKey);
+      displayRecoveryTimetable(container, lessons, dateKey, true);
+      return;
+    } catch(err) {
+      // If parsing fails, continue
     }
-  } catch(err) {
-    container.innerHTML = `<div class="empty-state" style="color:var(--danger);">⚠️ Stundenplan konnte nicht geladen werden</div>`;
   }
+  
+  // No data available - show loading message
+  container.innerHTML = `<div class="empty-state" style="padding:16px 0;color:var(--text-muted);"><p>📋 Daten noch nicht geladen</p><p style="font-size:0.75rem;margin-top:4px;">Der Stundenplan wird gespeichert wenn du die Plan-Seite besuchst.</p></div>`;
 }
 window.loadRecoveryTimetable=loadRecoveryTimetable;
 
-function displayRecoveryTimetable(container, lessons, dateKey) {
-  if(!lessons.length) {
-    container.innerHTML = `<div class="lesson-card holiday"><div style="flex:1;"><div class="lesson-subject" style="color:var(--success)">🎉 Kein Unterricht</div></div></div>`;
+function displayRecoveryTimetable(container, lessons, dateKey, hasData=false) {
+  if(!lessons || !Array.isArray(lessons) || lessons.length === 0) {
+    if(!hasData) {
+      container.innerHTML = `<div class="empty-state" style="padding:16px 0;color:var(--text-muted);"><p>📋 Daten noch nicht geladen</p><p style="font-size:0.75rem;margin-top:4px;">Der Stundenplan wird gespeichert wenn du die Plan-Seite besuchst.</p></div>`;
+    } else {
+      container.innerHTML = `<div class="lesson-card holiday"><div style="flex:1;"><div class="lesson-subject" style="color:var(--success)">🎉 Kein Unterricht</div><div class="lesson-room" style="font-size:0.75rem;">An diesem Tag war kein Unterricht</div></div></div>`;
+    }
     return;
   }
   
