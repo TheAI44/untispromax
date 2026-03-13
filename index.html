@@ -732,7 +732,36 @@ let teacherNames = {
   'Rk': {fullName: 'Rosenke', gender: 'm'},
   'Rg': {fullName: 'Runge', gender: 'f'},
   'Sk': {fullName: 'Schenk', gender: 'f'},
-  'Gl': {fullName: 'Gieseler', gender: 'f'}
+  'Schi': {fullName: 'Schiller', gender: 'm'},
+  'Si': {fullName: 'Schlink', gender: 'f'},
+  'Sli': {fullName: 'Schlobinski', gender: 'f'},
+  'Sh': {fullName: 'Schulz', gender: 'f'},
+  'Se': {fullName: 'Serbser', gender: 'm'},
+  'So': {fullName: 'Sonne', gender: 'm'},
+  'Spi': {fullName: 'Spitznagel', gender: 'f'},
+  'Sp': {fullName: 'Sprenger', gender: 'm'},
+  'Spy': {fullName: 'Spyczak von Brzezinska', gender: 'f'},
+  'St': {fullName: 'Stremmel', gender: 'f'},
+  'To': {fullName: 'Tobias', gender: 'f'},
+  'Ts': {fullName: 'Tosun', gender: 'm'},
+  'Tr': {fullName: 'Treusch', gender: 'f'},
+  'Val': {fullName: 'Vallentin', gender: 'f'},
+  'Ve': {fullName: 'Venne', gender: 'f'},
+  'Vk': {fullName: 'Volk', gender: 'm'},
+  'Ol': {fullName: 'von Oldenburg', gender: 'f'},
+  'Sz': {fullName: 'von Szada', gender: 'f'},
+  'Wr': {fullName: 'Wacker', gender: 'f'},
+  'Wb': {fullName: 'Weber', gender: 'm'},
+  'Wt': {fullName: 'Wendt', gender: 'f'},
+  'Wck': {fullName: 'Wieck', gender: 'f'},
+  'vB': {fullName: 'Wischka von Borczyskowski', gender: 'f'},
+  'W': {fullName: 'Wolfs', gender: 'm'},
+  'Bd': {fullName: 'Bonnard', gender: 'm'},
+  'Da': {fullName: 'Damm', gender: 'f'},
+  'Ls': {fullName: 'Lassen', gender: 'f'},
+  'Mt': {fullName: 'Mützig', gender: 'f'},
+  'Rs': {fullName: 'Rosenau', gender: 'f'},
+  'Sw': {fullName: 'Sawari', gender: 'f'}
 };
 
 function expandTeacherName(abbr) {
@@ -1130,9 +1159,7 @@ async function loadMensaFromWebsite(dateKey) {
       const imgs = html.match(/<img[^>]+src=["']([^"']+\.(?:png|jpg|jpeg|gif))["']/gi) || [];
       if(imgs.length > 0) {
         const lastImg = imgs[imgs.length - 1];
-        const match = lastImg.match(/src=["']([^"']+)['\"]
-
-/);
+        const match = lastImg.match(/src=["']([^"']+["'])/);
         if(match) imgUrl = match[1];
       }
     }
