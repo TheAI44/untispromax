@@ -1137,6 +1137,7 @@ async function saveRecoveryEntries() {
 function renderRecovery() {
   // Build last 14 days as selectable buttons
   const today = new Date();
+  const todayKey = today.toISOString().split('T')[0];
   const days14 = [];
   for(let i=0; i<14; i++){
     const d = new Date(today); d.setDate(d.getDate()-i);
@@ -1144,17 +1145,23 @@ function renderRecovery() {
   }
   const el = document.getElementById('recoveryDayBtns');
   if(!el) return;
-  el.innerHTML = days14.map(d => {
+  el.innerHTML = `
+    <button class="filter-tab active" onclick="selectRecoveryDate('${todayKey}',this)">🎯 Heute</button>
+    ${days14.map(d => {
     const key = d.toISOString().split('T')[0];
     const dayName = d.toLocaleDateString('de-DE',{weekday:'short'});
     const dateStr = d.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'});
     const hasEntries = (recoveryEntries[key]||[]).length > 0;
-    const isSelected = key === selectedRecoveryDate;
-    return `<button class="filter-tab${isSelected?' active':''}" onclick="selectRecoveryDate('${key}',this)">
+    return `<button class="filter-tab" onclick="selectRecoveryDate('${key}',this)">
       ${dayName} ${dateStr}${hasEntries?' ●':''}
     </button>`;
-  }).join('');
-  if(selectedRecoveryDate) renderRecoveryDay(selectedRecoveryDate);
+  }).join('')}
+  `;
+  // Auto-select today if not already selected
+  if(!selectedRecoveryDate) {
+    selectedRecoveryDate = todayKey;
+    renderRecoveryDay(todayKey);
+  }
 }
 window.renderRecovery=renderRecovery;
 
