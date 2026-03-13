@@ -150,8 +150,9 @@
   .day-tabs { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 12px; }
   .day-tab { flex-shrink: 0; padding: 8px 14px; border-radius: 20px; border: 1px solid var(--border); background: transparent; color: var(--text-secondary); font-family: inherit; font-size: 0.82rem; font-weight: 600; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
   .day-tab.active { background: var(--accent2); border-color: var(--accent2); color: #fff; }
-  .lesson-group { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 14px; margin-bottom: 8px; }
+  .lesson-group { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 14px; margin-bottom: 8px; position: relative; }
   .lesson-group.double-hour { border: 2px solid var(--accent2); box-shadow: 0 0 0 1px var(--border); }
+  .lesson-group.double-hour::after { content: ''; position: absolute; right: -8px; top: 50%; width: 4px; height: 24px; background: var(--accent2); border-radius: 2px; transform: translateY(-50%); }
   .lesson-group-header { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 8px; }
   .lesson-group-header:last-child { margin-bottom: 0; }
   .lesson-time { font-family: 'Space Mono', monospace; font-size: 0.75rem; color: var(--text-muted); min-width: 80px; flex-shrink: 0; }
@@ -378,6 +379,7 @@
       <div class="section-block fade-up"><div class="section-title">📚 Nächste Abgaben (7 Tage)</div><div id="homeHwList"></div></div>
       <div class="section-block fade-up"><div class="section-title">📝 Kommende Tests</div><div id="homeTestList"></div></div>
       <div class="section-block fade-up"><div class="section-title">🗓️ Bevorstehende Events</div><div id="homeEventList"></div></div>
+      <div class="section-block fade-up"><div class="section-title">🍽️ Mensaplan diese Woche</div><div id="homeMensaList"></div></div>
     </div>
 
     <!-- TIMETABLE -->
@@ -649,6 +651,11 @@ const fbApp = initializeApp(firebaseConfig);
 const auth = getAuth(fbApp);
 const db = getFirestore(fbApp);
 
+// Load Tesseract.js for OCR support
+const tesseractScript = document.createElement('script');
+tesseractScript.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+document.head.appendChild(tesseractScript);
+
 // ── STATE ────────────────────────────────────────
 let currentUser = null, users = {}, homework = [], events = [], chats = {}, wishes = [];
 let currentPage = 'home', currentChatId = null, addingFor = 'homework';
@@ -667,6 +674,76 @@ let ttCache = JSON.parse(localStorage.getItem('ttCache') || '{}');
 let ttCacheTime = JSON.parse(localStorage.getItem('ttCacheTime') || '{}');
 // Chat file uploads
 let chatUploadFiles = [];
+
+// Teacher Names: Abkürzung -> {fullName, gender} Mapping
+let teacherNames = {
+  'Al': {fullName: 'Alberti', gender: 'f'},
+  'Ao': {fullName: 'Anderson', gender: 'f'},
+  'Ar': {fullName: 'Argtielles-Rubio', gender: 'm'},
+  'Ah': {fullName: 'Arnrich', gender: 'm'},
+  'Ba': {fullName: 'Basczok', gender: 'm'},
+  'Bh': {fullName: 'Behrens', gender: 'm'},
+  'B6': {fullName: 'Bentgen', gender: 'f'},
+  'BI': {fullName: 'Bolle', gender: 'm'},
+  'Bo': {fullName: 'Bornholdt', gender: 'f'},
+  'Bi': {fullName: 'Bruckmaier', gender: 'f'},
+  'Bw': {fullName: 'Büssow', gender: 'm'},
+  'Gd': {fullName: 'Greder', gender: 'f'},
+  'Cp': {fullName: 'Capone', gender: 'm'},
+  'Cla': {fullName: 'Claussen', gender: 'f'},
+  'Sv': {fullName: 'da Silva Pereira', gender: 'm'},
+  'De': {fullName: 'Demir', gender: 'm'},
+  'Do': {fullName: 'Domidian', gender: 'm'},
+  'El': {fullName: 'Eler', gender: 'm'},
+  'En': {fullName: 'Endemann', gender: 'm'},
+  'Bz': {fullName: 'Fiedler', gender: 'm'},
+  'Fz': {fullName: 'Fritz', gender: 'm'},
+  'Fg': {fullName: 'Frihling', gender: 'f'},
+  'Gg': {fullName: 'Gehrig', gender: 'f'},
+  'GI': {fullName: 'Gieseler', gender: 'f'},
+  'Gk': {fullName: 'Gralka', gender: 'm'},
+  'Ga': {fullName: 'Grave', gender: 'f'},
+  'Pi': {fullName: 'Grebe-Pinhao', gender: 'f'},
+  'Gh': {fullName: 'Grächen', gender: 'm'},
+  'Hn': {fullName: 'Hansch', gender: 'm'},
+  'Ht': {fullName: 'Hengstler', gender: 'm'},
+  'Hs': {fullName: 'Herbst', gender: 'm'},
+  'Heß': {fullName: 'Heß', gender: 'm'},
+  'HI': {fullName: 'Hilal', gender: 'm'},
+  'Hof': {fullName: 'Hoffmann', gender: 'f'},
+  'Hf': {fullName: 'Hoffmann', gender: 'f'},
+  'Iv': {fullName: 'Ivanic', gender: 'f'},
+  'Kal': {fullName: 'Kallenbach', gender: 'f'},
+  'KI': {fullName: 'Kempel', gender: 'm'},
+  'Kr': {fullName: 'Kröger', gender: 'm'},
+  'Lg': {fullName: 'Lang', gender: 'm'},
+  'La': {fullName: 'Laversanne', gender: 'f'},
+  'Li': {fullName: 'Lipinski', gender: 'f'},
+  'Ma': {fullName: 'Mansson', gender: 'f'},
+  'Mos': {fullName: 'Moss', gender: 'f'},
+  'Mr': {fullName: 'Miller', gender: 'm'},
+  'My': {fullName: 'Myska', gender: 'm'},
+  'Pa': {fullName: 'Pareigis', gender: 'f'},
+  'Rab': {fullName: 'Rabe', gender: 'f'},
+  'Ra': {fullName: 'Rau', gender: 'f'},
+  'Rb': {fullName: 'Rebholz', gender: 'f'},
+  'RI': {fullName: 'Redlich', gender: 'm'},
+  'Rw': {fullName: 'Reichwein', gender: 'm'},
+  'Rk': {fullName: 'Rosenke', gender: 'm'},
+  'Rg': {fullName: 'Runge', gender: 'f'},
+  'Sk': {fullName: 'Schenk', gender: 'f'},
+  'Gl': {fullName: 'Gieseler', gender: 'f'}
+};
+
+function expandTeacherName(abbr) {
+  const teacher = teacherNames[abbr?.trim()];
+  if(!teacher) return abbr; // Fallback to original if not found
+  const title = teacher.gender === 'f' ? 'Frau' : 'Herr';
+  return title + ' ' + teacher.fullName;
+}
+
+// Mensaplan: {YYYY-MM-DD: {meals: [{name, allergens, vegan}], validUntil: timestamp}}
+let mensaplan = {};
 
 // ── FIRESTORE ────────────────────────────────────
 async function fbGet(id) { 
@@ -689,10 +766,10 @@ async function fbSet(id, v) {
 async function loadAllData() {
   try {
     console.log('[DEBUG] Loading all data from Firestore...');
-    const [hw,ev,us,ch,wi,rec,tt] = await Promise.all([fbGet('homework'),fbGet('events'),fbGet('users'),fbGet('chats'),fbGet('wishes'),fbGet('recovery'),fbGet('timetables')]);
+    const [hw,ev,us,ch,wi,rec,tt,mp] = await Promise.all([fbGet('homework'),fbGet('events'),fbGet('users'),fbGet('chats'),fbGet('wishes'),fbGet('recovery'),fbGet('timetables'),fbGet('mensaplan')]);
     homework = hw || getSampleHW(); events = ev || getSampleEvents();
     users = us || {}; chats = ch || {}; wishes = wi || []; recoveryEntries = rec || {};
-    timetables = tt || {};
+    timetables = tt || {}; mensaplan = mp || {};
     if (!hw) await fbSet('homework', homework);
     if (!ev) await fbSet('events', events);
     if (!us) await fbSet('users', users);
@@ -700,6 +777,7 @@ async function loadAllData() {
     if (!wi) await fbSet('wishes', wishes);
     if (!rec) await fbSet('recovery', recoveryEntries);
     if (!tt) await fbSet('timetables', timetables);
+    if (!mp) await fbSet('mensaplan', mensaplan);
     console.log('[DEBUG] All data loaded. Users:', Object.keys(users).length);
   } catch(e) {
     console.error('[DEBUG] Error loading data:', e);
@@ -709,7 +787,7 @@ async function loadAllData() {
 async function saveData() {
   try {
     console.log('[DEBUG] Saving all data...');
-    await Promise.all([fbSet('homework',homework),fbSet('events',events),fbSet('users',users),fbSet('chats',chats),fbSet('wishes',wishes),fbSet('timetables',timetables)]);
+    await Promise.all([fbSet('homework',homework),fbSet('events',events),fbSet('users',users),fbSet('chats',chats),fbSet('wishes',wishes),fbSet('timetables',timetables),fbSet('mensaplan',mensaplan)]);
     console.log('[DEBUG] Data saved successfully');
   } catch(e) {
     console.error('[DEBUG] Error saving data:', e);
@@ -723,6 +801,7 @@ function startRealtimeListeners() {
   onSnapshot(doc(db,'appdata','users'), s => { if(s.exists())users=s.data().value||{}; });
   onSnapshot(doc(db,'appdata','recovery'), s => { if(s.exists()){recoveryEntries=s.data().value||{}; if(currentPage==='recovery')renderRecovery();} });
   onSnapshot(doc(db,'appdata','timetables'), s => { if(s.exists()){timetables=s.data().value||{}; if(currentPage==='recovery')renderRecovery();} });
+  onSnapshot(doc(db,'appdata','mensaplan'), s => { if(s.exists()){mensaplan=s.data().value||{}; if(currentPage==='home')renderHome();} });
   onSnapshot(doc(db,'appdata','wishes'), s => {
     if(s.exists()){
       wishes=s.data().value||[];
@@ -964,6 +1043,151 @@ function initApp() {
   goTo('home');
   // Preload timetable in background (no await, just start it)
   preloadTimetable();
+  // Auto-load mensa plan in background
+  autoLoadMensaPlan();
+}
+
+// Auto-load Mensaplan in background (daily)
+function autoLoadMensaPlan() {
+  setTimeout(async ()=>{
+    try {
+      const today = new Date();
+      today.setHours(0,0,0,0);
+      const dateKey = today.toISOString().split('T')[0];
+      
+      // Check if already loaded for today
+      const cached = mensaplan[dateKey];
+      if(cached && cached.validUntil > Date.now()) {
+        console.log('[DEBUG] Mensaplan already loaded for today');
+        return;
+      }
+      
+      // Try to load from server first (future: backend endpoint)
+      try {
+        console.log('[DEBUG] Fetching mensaplan from server...');
+        const res = await fetch(`${SERVER_URL}/mensa`, {signal: AbortSignal.timeout(5000)});
+        if(res.ok) {
+          const data = await res.json();
+          if(data.meals && Array.isArray(data.meals)) {
+            mensaplan[dateKey] = {
+              meals: data.meals,
+              validUntil: Date.now() + 24*60*60*1000,
+              source: 'server',
+              loadedAt: new Date().toISOString()
+            };
+            await fbSet('mensaplan', mensaplan);
+            console.log('[DEBUG] Mensaplan loaded from server:', data.meals.length, 'meals');
+            return;
+          }
+        }
+      } catch(e) {
+        console.log('[DEBUG] Server /mensa not available, trying website fallback');
+      }
+      
+      // Fallback: Try to fetch and OCR from website
+      await loadMensaFromWebsite(dateKey);
+      
+    } catch(err) {
+      console.log('[DEBUG] Mensa autoload failed (non-critical):', err.message);
+    }
+  }, 3000);
+}
+
+async function loadMensaFromWebsite(dateKey) {
+  try {
+    console.log('[DEBUG] Trying to load mensa from website with OCR...');
+    
+    // Use CORS proxy to fetch website
+    const corsUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent('https://www.hlg-hamburg.de/mammas-canteen/')}`;
+    const proxyRes = await fetch(corsUrl, {signal: AbortSignal.timeout(8000)});
+    
+    if(!proxyRes.ok) {
+      console.log('[DEBUG] CORS proxy failed');
+      return;
+    }
+    
+    const html = await proxyRes.text();
+    
+    // Try to extract image URLs - look for images related to menu/mensa/plan
+    let imgUrl = null;
+    const patterns = [
+      /src=["']([^"']*\.(?:png|jpg|jpeg|gif))[^"']*["'].*?(?:plan|mensa|menu|speise)/i,
+      /src=["']([^"']*(?:plan|mensa|menu|speise)[^"']*\.(?:png|jpg|jpeg|gif))["']/i,
+      /<img[^>]*(?:alt|title)=["'][^"']*(?:plan|mensa|menu)[^"']*["'][^>]*src=["']([^"']+)["']/i,
+      /<img[^>]*src=["']([^"']+)["'][^>]*(?:alt|title)=["'][^"']*(?:plan|mensa|menu)[^"']*["']/i
+    ];
+    
+    for(const pattern of patterns) {
+      const match = html.match(pattern);
+      if(match && match[1]) {
+        imgUrl = match[1];
+        break;
+      }
+    }
+    
+    // If no specific pattern matched, try to get largest image
+    if(!imgUrl) {
+      const imgs = html.match(/<img[^>]+src=["']([^"']+\.(?:png|jpg|jpeg|gif))["']/gi) || [];
+      if(imgs.length > 0) {
+        const lastImg = imgs[imgs.length - 1];
+        const match = lastImg.match(/src=["']([^"']+)['\"]
+
+/);
+        if(match) imgUrl = match[1];
+      }
+    }
+    
+    if(!imgUrl) {
+      console.log('[DEBUG] No suitable image found in website');
+      return;
+    }
+    
+    // Make URL absolute if needed
+    if(imgUrl.startsWith('/')) {
+      imgUrl = 'https://www.hlg-hamburg.de' + imgUrl;
+    } else if(!imgUrl.startsWith('http')) {
+      imgUrl = 'https://www.hlg-hamburg.de/' + imgUrl;
+    }
+    
+    console.log('[DEBUG] Found mensa image:', imgUrl);
+    
+    // Fetch image
+    const imgRes = await fetch(imgUrl, {signal: AbortSignal.timeout(5000)});
+    if(!imgRes.ok) {
+      console.log('[DEBUG] Could not fetch image');
+      return;
+    }
+    const blob = await imgRes.blob();
+    
+    // Use Tesseract if available
+    if(!window.Tesseract) {
+      console.log('[DEBUG] Tesseract not loaded yet');
+      return;
+    }
+    
+    console.log('[DEBUG] Running OCR on mensa image...');
+    const { data: { text } } = await Tesseract.recognize(blob, 'deu');
+    console.log('[DEBUG] OCR result (first 300 chars):', text.substring(0, 300));
+    
+    const meals = parseMensaMeals(text);
+    
+    if(meals.length > 0) {
+      mensaplan[dateKey] = {
+        meals,
+        validUntil: Date.now() + 24*60*60*1000,
+        source: 'website-ocr',
+        loadedAt: new Date().toISOString()
+      };
+      await fbSet('mensaplan', mensaplan);
+      console.log('[DEBUG] ✅ Mensaplan loaded from website OCR:', meals.length, 'meals');
+      if(currentPage==='home') renderHome();
+    } else {
+      console.log('[DEBUG] ⚠️ OCR parsed no meals from image');
+    }
+    
+  } catch(err) {
+    console.error('[DEBUG] Website OCR failed:', err.message);
+  }
 }
 
 // Preload timetable in background for faster display
@@ -1083,6 +1307,60 @@ function renderHome() {
   const evEl=document.getElementById('homeEventList');
   if(evEl)evEl.innerHTML=evts.length===0?`<div class="empty-state">Keine Ereignisse diese Woche</div>`:
     evts.map(e=>`<div class="card event" onclick="goTo('events')"><div class="card-row"><div><div class="card-title">${e.title}</div><div class="card-sub">${new Date(e.date).toLocaleDateString('de-DE')}</div></div><span class="badge badge-success">Bald</span></div></div>`).join('');
+  
+  // Render Mensaplan
+  const mensaEl=document.getElementById('homeMensaList');
+  if(mensaEl) renderMensaWidget(mensaEl, today);
+}
+
+function renderMensaWidget(el, startDate) {
+  // Check if current date is in holidays
+  const inHolidays = isHoliday(startDate.toISOString().split('T')[0]);
+  
+  if(inHolidays) {
+    const holiday = events.find(e => {
+      if(!e.title.includes('Ferien') && !e.title.includes('Schulfrei')) return false;
+      const start = new Date(e.date);
+      const end = e.dateEnd ? new Date(e.dateEnd) : start;
+      return startDate >= start && startDate <= end;
+    });
+    if(holiday) {
+      el.innerHTML = `<div class="card holiday">
+        <div class="card-row">
+          <div>
+            <div class="card-title">🏖️ ${holiday.title}</div>
+            <div class="card-sub">Keine Mensa diese Woche</div>
+          </div>
+          <span class="badge badge-success">Schulfrei</span>
+        </div>
+      </div>`;
+      return;
+    }
+  }
+  
+  // Find mensaplan for this week
+  const dateKey = startDate.toISOString().split('T')[0];
+  const weekMensa = mensaplan[dateKey];
+  
+  if(!weekMensa || !weekMensa.meals || weekMensa.meals.length === 0) {
+    el.innerHTML = `<div class="empty-state">Mensaplan noch nicht verfügbar 📋</div>`;
+    return;
+  }
+  
+  // Show first meal of the week as preview
+  const meal = weekMensa.meals[0];
+  const vegan = meal.vegan ? '🌱 Vegan' : '';
+  const allergens = meal.allergens ? ` \u00b7 ${meal.allergens}` : '';
+  
+  el.innerHTML = `<div class="card">
+    <div style="display:flex;gap:12px;align-items:flex-start;">
+      <div style="flex:1;">
+        <div class="card-title">${meal.name}</div>
+        <div class="card-sub" style="margin-top:6px;font-size:0.75rem;color:var(--text-muted);">${vegan}${allergens}</div>
+      </div>
+      <span class="badge badge-accent">1/${weekMensa.meals.length}</span>
+    </div>
+  </div>`;
 }
 
 // ── TIMETABLE ─────────────────────────────────────
@@ -1227,6 +1505,119 @@ function selectDay(idx) {
 }
 window.selectDay=selectDay;
 
+// ── MENSAPLAN (Mensa-Verwaltung) ───────────────
+async function processMensaPlanImage(file) {
+  if(!window.Tesseract) {
+    showMsg('❌ OCR-Bibliothek wird geladen... Bitte versuchen Sie es gleich nochmal.');
+    return;
+  }
+  
+  showMsg('📸 Erkenne Mensaplan mit OCR...');
+  try {
+    const { data: { text } } = await Tesseract.recognize(file, 'deu');
+    console.log('[DEBUG] OCR Text:', text);
+    
+    // Parse meals from OCR text
+    const meals = parseMensaMeals(text);
+    if(meals.length === 0) {
+      showMsg('❌ Keine Mahlzeiten erkannt. Bitte versuchen Sie ein besseres Foto.');
+      return;
+    }
+    
+    // Save to mensaplan
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    const dateKey = today.toISOString().split('T')[0];
+    
+    mensaplan[dateKey] = {
+      meals: meals,
+      validUntil: Date.now() + 7*24*60*60*1000, // 1 week valid
+      uploadedBy: currentUser.email,
+      uploadedAt: new Date().toISOString()
+    };
+    
+    await fbSet('mensaplan', mensaplan);
+    showMsg('✅ Mensaplan erfolgreich hochgeladen! ' + meals.length + ' Gerichte erkannt.', 'success');
+    if(currentPage==='home') renderHome();
+  } catch(e) {
+    console.error('[DEBUG] OCR Error:', e);
+    showMsg('❌ OCR Fehler: ' + e.message);
+  }
+}
+window.processMensaPlanImage=processMensaPlanImage;
+
+function parseMensaMeals(text) {
+  // Simple parser: extract lines that look like meal descriptions
+  // Format: "Gericht ... (vegan optional)"
+  const lines = text.split('\n').filter(l => l.trim().length > 3);
+  const meals = [];
+  
+  for(const line of lines) {
+    const trimmed = line.trim();
+    // Skip common headers/footers
+    if(['Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Menü','Mensa','HLG'].some(h => trimmed.includes(h))) continue;
+    
+    const isVegan = trimmed.includes('vegan') || trimmed.includes('Vegan');
+    const allergens = trimmed.match(/\([^)]*allergen[^)]*\)/i)?.[0] || '';
+    const name = trimmed.replace(/\(.*\)/g, '').trim();
+    
+    if(name.length > 5) {
+      meals.push({
+        name: name,
+        vegan: isVegan,
+        allergens: allergens
+      });
+    }
+  }
+  
+  return meals;
+}
+
+// Accept manual mensa entry (admin only)
+async function uploadMensaPlanManual(mealsText) {
+  if(!currentUser?.isAdmin) return showMsg('❌ Nur Admins können Mensapläne bearbeiten.');
+  
+  try {
+    const lines = mealsText.split('\n').filter(l => l.trim());
+    const meals = lines.map(line => {
+      const isVegan = line.includes('🌱');
+      const name = line.replace('🌱', '').trim();
+      return { name, vegan: isVegan, allergens: '' };
+    });
+    
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    const dateKey = today.toISOString().split('T')[0];
+    
+    mensaplan[dateKey] = {
+      meals,
+      validUntil: Date.now() + 7*24*60*60*1000,
+      uploadedBy: currentUser.email,
+      uploadedAt: new Date().toISOString()
+    };
+    
+    await fbSet('mensaplan', mensaplan);
+    showMsg('✅ Mensaplan gespeichert! ' + meals.length + ' Gerichte.', 'success');
+    if(currentPage==='home') renderHome();
+  } catch(e) {
+    console.error('[DEBUG] Manual upload error:', e);
+    showMsg('❌ Fehler: ' + e.message);
+  }
+}
+window.uploadMensaPlanManual=uploadMensaPlanManual;
+
+async function handleMensaImageUpload(event) {
+  const file = event.target.files?.[0];
+  if(!file) return;
+  if(!currentUser?.isAdmin) return showMsg('❌ Nur Admins können Mensapläne bearbeiten.');
+  
+  showMsg('⏳ Verarbeite Bild mit OCR...');
+  await processMensaPlanImage(file);
+  // Reset input
+  document.getElementById('mensaPlanImageInput').value = '';
+}
+window.handleMensaImageUpload=handleMensaImageUpload;
+
 function renderDayLessons(idx) {
   const lessons=ttData?.days?.[idx]||[];
   const el=document.getElementById('ttContent');
@@ -1279,7 +1670,7 @@ function renderDayLessons(idx) {
           <div class="lesson-subjects" style="flex:1;">
             <div class="lesson-item ${cls}">
               <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">${tag}<span class="lesson-subject">${l.subject}</span></div>
-              <div class="lesson-room">${l.teacher} · ${l.room}${l.note?' · '+l.note:''}</div>
+              <div class="lesson-room">${expandTeacherName(l.teacher)} · ${l.room}${l.note?' · '+l.note:''}</div>
             </div>
           </div>
         </div>`;
@@ -1535,7 +1926,7 @@ function displayRecoveryTimetable(container, lessons, dateKey, hasData=false) {
           <div class="lesson-subjects" style="flex:1;">
             <div class="lesson-item ${cls}">
               <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">${tag}<span class="lesson-subject">${l.subject}</span></div>
-              <div class="lesson-room">${l.teacher} · ${l.room}${l.note ? ' · '+l.note : ''}</div>
+              <div class="lesson-room">${expandTeacherName(l.teacher)} · ${l.room}${l.note ? ' · '+l.note : ''}</div>
             </div>
           </div>
         </div>`;
@@ -2054,7 +2445,29 @@ function openSettings(){
   const adminSec=document.getElementById('adminSettingsSection');
   if(currentUser.isAdmin){
     const others=Object.values(users).filter(u=>u.email!==currentUser.email);
-    adminSec.innerHTML=`<div class="admin-section"><h4>👑 ADMIN – Berechtigungen</h4><p style="font-size:0.78rem;color:var(--text-muted);margin-bottom:10px;">Erlaube Mitschülern, Einträge hinzuzufügen</p>${others.map(u=>`<div class="admin-user-row"><span class="admin-user-name">${u.name}</span><label class="toggle"><input type="checkbox" ${u.canPost?'checked':''} onchange="toggleCanPost('${u.email}',this.checked)"><span class="toggle-slider"></span></label></div>`).join('')}</div>`;
+    let adminHTML = `<div class="admin-section"><h4>👑 ADMIN – Berechtigungen</h4><p style="font-size:0.78rem;color:var(--text-muted);margin-bottom:10px;">Erlaube Mitschülern, Einträge hinzuzufügen</p>${others.map(u=>`<div class="admin-user-row"><span class="admin-user-name">${u.name}</span><label class="toggle"><input type="checkbox" ${u.canPost?'checked':''} onchange="toggleCanPost('${u.email}',this.checked)"><span class="toggle-slider"></span></label></div>`).join('')}</div>`;
+    
+    // Add Mensaplan status
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    const dateKey = today.toISOString().split('T')[0];
+    const mensaStatus = mensaplan[dateKey]?.meals?.length || 0;
+    const mensaSource = mensaplan[dateKey]?.source || 'keine';
+    
+    adminHTML += `<div class="admin-section"><h4>🍽️ MENSAPLAN-VERWALTUNG</h4>
+      <p style="font-size:0.78rem;color:var(--text-muted);margin-bottom:10px;">Automatisches Laden von <strong>hlg-hamburg.de/mammas-canteen</strong></p>
+      <div style="background:rgba(0,180,255,0.08);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:12px;font-size:0.78rem;">
+        <div>✅ Status heute: <strong>${mensaStatus} Gerichte</strong></div>
+        <div style="color:var(--text-muted);margin-top:4px;">Quelle: ${mensaSource}</div>
+      </div>
+      <p style="font-size:0.75rem;color:var(--text-muted);margin-bottom:8px;">Falls automatisches Laden fehlschlägt, korrigiere manuell:</p>
+      <div style="display:flex;gap:8px;margin-bottom:8px;">
+        <textarea id="mensaPlanManualInput" class="form-input" placeholder="Gericht 1&#10;Gericht 2&#10;🌱 Vegan Gericht" rows="2" style="font-size:0.85rem;flex:1;"></textarea>
+        <button class="btn btn-secondary" style="padding:10px 12px;white-space:nowrap;height:fit-content;" onclick="uploadMensaPlanManual(document.getElementById('mensaPlanManualInput').value)">✅ Update</button>
+      </div>
+    </div>`;
+    
+    adminSec.innerHTML=adminHTML;
   } else adminSec.innerHTML='';
   // Wünsche-Sektion für normale Nutzer
   const wishSec=document.getElementById('wishSendSection');
