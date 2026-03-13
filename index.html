@@ -1130,6 +1130,8 @@ function renderDayLessons(idx) {
 // recoveryEntries = { "2026-03-10": [ {id, author, subject, text, attachments, ts}, ... ] }
 let recoveryEntries = {};
 let selectedRecoveryDate = null;
+let showRecoveryTimetable = false;
+let recoveryTimetableData = null;
 
 async function loadRecoveryEntries() {
   const data = await fbGet('recovery');
@@ -1140,20 +1142,81 @@ async function saveRecoveryEntries() {
   await fbSet('recovery', recoveryEntries);
 }
 
+// Helper: check if date is weekend
+function isWeekend(dateStr) {
+  const d = new Date(dateStr);
+  const day = d.getDay();
+  return day === 0 || day === 6; // Sunday or Saturday
+}
+
+// Helper: check if date is in holiday period
+function isHoliday(dateStr) {
+  const d = new Date(dateStr);
+  return events.some(e => {
+    if(!e.title.includes('Ferien') && !e.title.includes('Schulfrei')) return false;
+    const start = new Date(e.date);
+    const end = e.dateEnd ? new Date(e.dateEnd) : start;
+    return d >= start && d <= end;
+  });
+}
+
+// Helper: get holiday dates (to show 2 weeks before)
+function getHolidayInfo(dateStr) {
+  const d = new Date(dateStr);
+  const holiday = events.find(e => {
+    if(!e.title.includes('Ferien') && !e.title.includes('Schulfrei')) return false;
+    const start = new Date(e.date);
+    const end = e.dateEnd ? new Date(e.dateEnd) : start;
+    return d >= start && d <= end;
+  });
+  if(!holiday) return null;
+  return { start: new Date(holiday.date), end: holiday.dateEnd ? new Date(holiday.dateEnd) : new Date(holiday.date) };
+}
+
+// Helper: check if should show day (weekday + 2 weeks before holidays)
+function shouldShowDay(dateStr) {
+  // Never show weekends
+  if(isWeekend(dateStr)) return false;
+  
+  // Always show non-holiday weekdays
+  if(!isHoliday(dateStr)) return true;
+  
+  // For holidays, show if within 2 weeks before start
+  const d = new Date(dateStr);
+  const holiday = events.find(e => {
+    if(!e.title.includes('Ferien') && !e.title.includes('Schulfrei')) return false;
+    const start = new Date(e.date);
+    const end = e.dateEnd ? new Date(e.dateEnd) : start;
+    return d >= start && d <= end;
+  });
+  
+  if(!holiday) return true;
+  const holidayStart = new Date(holiday.date);
+  const twoWeeksBefore = new Date(holidayStart);
+  twoWeeksBefore.setDate(twoWeeksBefore.getDate() - 14);
+  
+  return d >= twoWeeksBefore && d < holidayStart;
+}
+
 function renderRecovery() {
-  // Build last 14 days as selectable buttons
   const today = new Date();
   const todayKey = today.toISOString().split('T')[0];
-  const days14 = [];
-  for(let i=0; i<14; i++){
+  const validDays = [];
+  
+  // Get last 30 days but only valid weekdays
+  for(let i=0; i<30; i++){
     const d = new Date(today); d.setDate(d.getDate()-i);
-    days14.push(d);
+    const key = d.toISOString().split('T')[0];
+    if(shouldShowDay(key)) {
+      validDays.push(d);
+    }
   }
+  
   const el = document.getElementById('recoveryDayBtns');
   if(!el) return;
   el.innerHTML = `
     <button class="filter-tab active" onclick="selectRecoveryDate('${todayKey}',this)">🎯 Heute</button>
-    ${days14.map(d => {
+    ${validDays.map(d => {
     const key = d.toISOString().split('T')[0];
     const dayName = d.toLocaleDateString('de-DE',{weekday:'short'});
     const dateStr = d.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'});
@@ -1173,6 +1236,7 @@ window.renderRecovery=renderRecovery;
 
 function selectRecoveryDate(dateKey, btn) {
   selectedRecoveryDate = dateKey;
+  showRecoveryTimetable = false;
   document.querySelectorAll('#recoveryDayBtns .filter-tab').forEach(t=>t.classList.remove('active'));
   btn.classList.add('active');
   renderRecoveryDay(dateKey);
@@ -1184,11 +1248,16 @@ function renderRecoveryDay(dateKey) {
   const entries = recoveryEntries[dateKey] || [];
   const d = new Date(dateKey);
   const dateLabel = d.toLocaleDateString('de-DE',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+  const dayIdx = d.getDay() === 0 ? 4 : (d.getDay() === 6 ? 4 : d.getDay() - 1); // Mon=0, Fri=4
 
   const attachHtml = (attachments) => (attachments||[]).map(a=>renderAttach(a)).join('');
 
   el.innerHTML = `
-    <div style="font-size:0.82rem;color:var(--text-muted);margin-bottom:12px;">📅 ${dateLabel}</div>
+    <div style="font-size:0.82rem;color:var(--text-muted);margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;">
+      <span>📅 ${dateLabel}</span>
+      <button class="btn btn-secondary" style="width:auto;padding:6px 12px;font-size:0.75rem;" onclick="toggleRecoveryTimetable('${dateKey}',${dayIdx})">📋 ${showRecoveryTimetable?'Stoff':'Stundenplan'}</button>
+    </div>
+    ${showRecoveryTimetable ? `<div id="recoveryTimetableContainer" style="margin-bottom:16px;"><div class="tt-loading"><div class="spinner" style="width:24px;height:24px;"></div><div>Stundenplan wird geladen…</div></div></div>` : ''}
     ${entries.length === 0 ? '<div class="empty-state" style="padding:20px 0;">Noch kein Stoff eingetragen</div>' :
       entries.map(e => `
         <div class="hw-item" style="cursor:default;">
@@ -1208,6 +1277,65 @@ function renderRecoveryDay(dateKey) {
     }
     <button class="btn btn-secondary" style="margin-top:12px;" onclick="openAddRecovery('${dateKey}')">+ Stoff eintragen</button>
   `;
+  
+  // Load timetable if toggled
+  if(showRecoveryTimetable) {
+    setTimeout(() => loadRecoveryTimetable(dateKey, dayIdx), 100);
+  }
+}
+
+async function toggleRecoveryTimetable(dateKey, dayIdx) {
+  showRecoveryTimetable = !showRecoveryTimetable;
+  renderRecoveryDay(dateKey);
+}
+window.toggleRecoveryTimetable=toggleRecoveryTimetable;
+
+async function loadRecoveryTimetable(dateKey, dayIdx) {
+  const container = document.getElementById('recoveryTimetableContainer');
+  if(!container) return;
+  
+  // Determine week offset (0 = current week)
+  const today = new Date();
+  const d = new Date(dateKey);
+  const weekDiff = Math.floor((d - today) / (7 * 24 * 60 * 60 * 1000));
+  let weekOffset = 0;
+  if(weekDiff <= 0) weekOffset = 0;
+  else if(weekDiff > 0 && weekDiff < 7) weekOffset = 1;
+  else return; // Too far away
+  
+  // Check cache first
+  const cacheKey = `week_${weekOffset}`;
+  if(ttCache[cacheKey]) {
+    const lessons = ttCache[cacheKey].days?.[dayIdx] || [];
+    displayRecoveryTimetable(container, lessons, dateKey);
+    return;
+  }
+  
+  // Fetch from server
+  try {
+    const res = await fetch(`${SERVER_URL}/timetable?offset=${weekOffset}`, {signal: AbortSignal.timeout(8000)});
+    if(res.ok) {
+      const data = await res.json();
+      const lessons = data.days?.[dayIdx] || [];
+      displayRecoveryTimetable(container, lessons, dateKey);
+    }
+  } catch(err) {
+    container.innerHTML = `<div class="empty-state" style="color:var(--danger);">⚠️ Stundenplan konnte nicht geladen werden</div>`;
+  }
+}
+window.loadRecoveryTimetable=loadRecoveryTimetable;
+
+function displayRecoveryTimetable(container, lessons, dateKey) {
+  if(!lessons.length) {
+    container.innerHTML = `<div class="lesson-card holiday"><div style="flex:1;"><div class="lesson-subject" style="color:var(--success)">🎉 Kein Unterricht</div></div></div>`;
+    return;
+  }
+  
+  container.innerHTML = lessons.map(l => {
+    const cls = l.cancelled ? 'cancelled' : l.substitution ? 'substitution' : '';
+    const tag = l.cancelled ? `<span class="tag-cancel">ENTFALL</span>` : l.substitution ? `<span class="tag-sub">VERTRETUNG</span>` : '';
+    return `<div class="lesson-card ${cls}"><div class="lesson-time">${l.time}</div><div style="flex:1;"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">${tag}<span class="lesson-subject">${l.subject}</span></div><div class="lesson-room">${l.teacher} · ${l.room}${l.note ? ' · '+l.note : ''}</div></div></div>`;
+  }).join('');
 }
 window.renderRecoveryDay=renderRecoveryDay;
 
