@@ -150,14 +150,19 @@
   .day-tabs { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 12px; }
   .day-tab { flex-shrink: 0; padding: 8px 14px; border-radius: 20px; border: 1px solid var(--border); background: transparent; color: var(--text-secondary); font-family: inherit; font-size: 0.82rem; font-weight: 600; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
   .day-tab.active { background: var(--accent2); border-color: var(--accent2); color: #fff; }
-  .lesson-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 14px; margin-bottom: 8px; display: flex; gap: 12px; align-items: center; }
-  .lesson-time { font-family: 'Space Mono', monospace; font-size: 0.75rem; color: var(--text-muted); min-width: 80px; }
+  .lesson-group { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 14px; margin-bottom: 8px; }
+  .lesson-group.double-hour { border: 2px solid var(--accent2); box-shadow: 0 0 0 1px var(--border); }
+  .lesson-group-header { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 8px; }
+  .lesson-group-header:last-child { margin-bottom: 0; }
+  .lesson-time { font-family: 'Space Mono', monospace; font-size: 0.75rem; color: var(--text-muted); min-width: 80px; flex-shrink: 0; }
+  .lesson-subjects { display: flex; gap: 8px; flex-wrap: wrap; flex: 1; }
+  .lesson-item { display: flex; flex-direction: column; flex: 1; min-width: 140px; }
   .lesson-subject { font-weight: 600; font-size: 0.9rem; }
   .lesson-room { font-size: 0.78rem; color: var(--text-secondary); margin-top: 3px; }
-  .lesson-card.cancelled { opacity: 0.6; }
-  .lesson-card.cancelled .lesson-subject { text-decoration: line-through; color: var(--danger); }
-  .lesson-card.substitution { border-left: 3px solid var(--warning); }
-  .lesson-card.holiday { border-left: 3px solid var(--success); background: rgba(0,229,160,0.05); }
+  .lesson-item.cancelled { opacity: 0.6; }
+  .lesson-item.cancelled .lesson-subject { text-decoration: line-through; color: var(--danger); }
+  .lesson-item.substitution { padding: 6px 8px; border-left: 3px solid var(--warning); background: rgba(255,179,0,0.05); border-radius: 4px; }
+  .lesson-group.holiday { border-left: 3px solid var(--success); background: rgba(0,229,160,0.05); }
   .tag-sub { font-size: 0.68rem; padding: 2px 8px; border-radius: 10px; background: rgba(255,179,0,0.12); color: var(--warning); font-weight: 700; }
   .tag-cancel { font-size: 0.68rem; padding: 2px 8px; border-radius: 10px; background: rgba(255,64,96,0.1); color: var(--danger); font-weight: 700; }
   .tt-loading { text-align: center; padding: 40px; color: var(--text-muted); }
@@ -1161,17 +1166,60 @@ window.selectDay=selectDay;
 function renderDayLessons(idx) {
   const lessons=ttData?.days?.[idx]||[];
   const el=document.getElementById('ttContent');
-  // Check for holiday (all lessons cancelled or empty)
   if(!lessons.length){
-    el.innerHTML=`<div class="lesson-card holiday"><div style="flex:1;"><div class="lesson-subject" style="color:var(--success)">🎉 Kein Unterricht</div><div class="lesson-room">Möglicherweise Ferien oder schulfrei</div></div></div>`;
+    el.innerHTML=`<div class="lesson-group holiday"><div style="flex:1;"><div class="lesson-subject" style="color:var(--success)">🎉 Kein Unterricht</div><div class="lesson-room">Möglicherweise Ferien oder schulfrei</div></div></div>`;
     return;
   }
-  el.innerHTML=lessons.map(l=>{
-    const cls=l.cancelled?'cancelled':l.substitution?'substitution':'';
-    const tag=l.cancelled?`<span class="tag-cancel">ENTFALL</span>`:l.substitution?`<span class="tag-sub">VERTRETUNG</span>`:'';
-    return `<div class="lesson-card ${cls}"><div class="lesson-time">${l.time}</div><div style="flex:1;"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">${tag}<span class="lesson-subject">${l.subject}</span></div><div class="lesson-room">${l.teacher} · ${l.room}${l.note?' · '+l.note:''}</div></div></div>`;
-  }).join('');
-}
+  
+  // Group lessons by time (to handle double hours and multiple subjects in same slot)
+  const grouped = [];
+  let i = 0;
+  while(i < lessons.length) {
+    const current = lessons[i];
+    const currentMinutes = parseTime(current.time);
+    
+    // Check if next lesson starts 45 mins later (double hour)
+    const next = lessons[i+1];
+    const isDoubleHour = next && parseTime(next.time) === currentMinutes + 45;
+    
+    if(isDoubleHour) {
+      // Double hour: collect all lessons up to 90 mins forward
+      const sameGroup = [current];
+      let j = i+1;
+      while(j < lessons.length && parseTime(lessons[j].time) < currentMinutes + 90) {
+        sameGroup.push(lessons[j]);
+        j++;
+      }
+      grouped.push({lessons: sameGroup, isDouble: true});
+      i = j;
+    } else {
+      // Single hour: collect all in exactly same time slot
+      const sameGroup = [current];
+      let j = i+1;
+      while(j < lessons.length && lessons[j].time === current.time) {
+        sameGroup.push(lessons[j]);
+        j++;
+      }
+      grouped.push({lessons: sameGroup, isDouble: false});
+      i = j;
+    }
+  }
+  
+  el.innerHTML=grouped.map(group=>{
+    return `<div class="lesson-group${group.isDouble?' double-hour':''}">
+      ${group.lessons.map((l, idx)=>{
+        const cls = l.cancelled?'cancelled':l.substitution?'substitution':'';
+        const tag = l.cancelled?`<span class="tag-cancel">ENTFALL</span>`:l.substitution?`<span class="tag-sub">VERTRETUNG</span>`:'';
+        return `<div class="lesson-group-header">
+          ${idx===0?`<div class="lesson-time">${l.time}</div>`:'<div class="lesson-time"></div>'}
+          <div class="lesson-subjects" style="flex:1;">
+            <div class="lesson-item ${cls}">
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">${tag}<span class="lesson-subject">${l.subject}</span></div>
+              <div class="lesson-room">${l.teacher} · ${l.room}${l.note?' · '+l.note:''}</div>
+            </div>
+          </div>
+        </div>`;\n      }).join('')}
+    </div>`;\n  }).join('');\n}\n\nfunction parseTime(timeStr) {\n  const [h,m] = timeStr.split(':').map(Number);\n  return h*60 + m;\n}
 
 // ── RECOVERY PAGE (Nachholstoff-Tagebuch) ────────
 // recoveryEntries = { "2026-03-10": [ {id, author, subject, text, attachments, ts}, ... ] }
@@ -1366,15 +1414,61 @@ function displayRecoveryTimetable(container, lessons, dateKey, hasData=false) {
     if(!hasData) {
       container.innerHTML = `<div class="empty-state" style="padding:16px 0;color:var(--text-muted);"><p>📋 Daten noch nicht geladen</p><p style="font-size:0.75rem;margin-top:4px;">Der Stundenplan wird automatisch gespeichert.</p></div>`;
     } else {
-      container.innerHTML = `<div class="lesson-card holiday"><div style="flex:1;"><div class="lesson-subject" style="color:var(--success)">🎉 Kein Unterricht</div><div class="lesson-room" style="font-size:0.75rem;">An diesem Tag war kein Unterricht</div></div></div>`;
+      container.innerHTML = `<div class="lesson-group holiday"><div style="flex:1;"><div class="lesson-subject" style="color:var(--success)">🎉 Kein Unterricht</div><div class="lesson-room" style="font-size:0.75rem;">An diesem Tag war kein Unterricht</div></div></div>`;
     }
     return;
   }
   
-  container.innerHTML = lessons.map(l => {
-    const cls = l.cancelled ? 'cancelled' : l.substitution ? 'substitution' : '';
-    const tag = l.cancelled ? `<span class="tag-cancel">ENTFALL</span>` : l.substitution ? `<span class="tag-sub">VERTRETUNG</span>` : '';
-    return `<div class="lesson-card ${cls}"><div class="lesson-time">${l.time}</div><div style="flex:1;"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">${tag}<span class="lesson-subject">${l.subject}</span></div><div class="lesson-room">${l.teacher} · ${l.room}${l.note ? ' · '+l.note : ''}</div></div></div>`;
+  // Group lessons by time (same as timetable page)
+  const grouped = [];
+  let i = 0;
+  while(i < lessons.length) {
+    const current = lessons[i];
+    const currentMinutes = parseTime(current.time);
+    
+    // Check if next lesson starts 45 mins later (double hour)
+    const next = lessons[i+1];
+    const isDoubleHour = next && parseTime(next.time) === currentMinutes + 45;
+    
+    if(isDoubleHour) {
+      // Double hour: collect all lessons up to 90 mins forward
+      const sameGroup = [current];
+      let j = i+1;
+      while(j < lessons.length && parseTime(lessons[j].time) < currentMinutes + 90) {
+        sameGroup.push(lessons[j]);
+        j++;
+      }
+      grouped.push({lessons: sameGroup, isDouble: true});
+      i = j;
+    } else {
+      // Single hour: collect all in exactly same time slot
+      const sameGroup = [current];
+      let j = i+1;
+      while(j < lessons.length && lessons[j].time === current.time) {
+        sameGroup.push(lessons[j]);
+        j++;
+      }
+      grouped.push({lessons: sameGroup, isDouble: false});
+      i = j;
+    }
+  }
+  
+  container.innerHTML = grouped.map(group => {
+    return `<div class="lesson-group${group.isDouble?' double-hour':''}">
+      ${group.lessons.map((l, idx) => {
+        const cls = l.cancelled ? 'cancelled' : l.substitution ? 'substitution' : '';
+        const tag = l.cancelled ? `<span class="tag-cancel">ENTFALL</span>` : l.substitution ? `<span class="tag-sub">VERTRETUNG</span>` : '';
+        return `<div class="lesson-group-header">
+          ${idx===0?`<div class="lesson-time">${l.time}</div>`:'<div class="lesson-time"></div>'}
+          <div class="lesson-subjects" style="flex:1;">
+            <div class="lesson-item ${cls}">
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">${tag}<span class="lesson-subject">${l.subject}</span></div>
+              <div class="lesson-room">${l.teacher} · ${l.room}${l.note ? ' · '+l.note : ''}</div>
+            </div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
   }).join('');
 }
 window.renderRecoveryDay=renderRecoveryDay;
