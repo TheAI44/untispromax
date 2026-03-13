@@ -114,7 +114,6 @@
   /* PAGES */
   .page { padding: 20px; display: none; }
   .page.active { display: block; }
-  #chatPage { padding: 0; }
 
   /* HOME */
   .home-header { margin-bottom: 24px; }
@@ -215,40 +214,6 @@
   .event-date-badge { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 48px; height: 48px; background: rgba(0,180,255,0.1); border-radius: 10px; flex-shrink: 0; }
   .event-date-day { font-size: 1.1rem; font-weight: 800; color: var(--accent); line-height: 1; }
   .event-date-mon { font-size: 0.62rem; letter-spacing: 1px; color: var(--text-muted); text-transform: uppercase; }
-
-  /* CHAT */
-  .chat-list-item { display: flex; gap: 12px; align-items: center; padding: 14px 16px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.2s; }
-  .chat-list-item:hover { background: rgba(0,180,255,0.04); }
-  .chat-avatar { width: 44px; height: 44px; border-radius: 50%; background: var(--bg-card2); border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1rem; color: var(--accent); flex-shrink: 0; overflow: hidden; }
-  .chat-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
-  .chat-name { font-weight: 600; font-size: 0.92rem; }
-  .chat-preview { font-size: 0.8rem; color: var(--text-muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
-  .chat-meta { font-size: 0.72rem; color: var(--text-muted); white-space: nowrap; }
-  #chatView { display: none; flex-direction: column; height: 100%; position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 110; }
-  #chatView.active { display: flex; height: 100%; }
-  .chat-topbar { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--border); background: rgba(4,13,26,0.95); flex-shrink: 0; }
-  .chat-topbar-back { background: transparent; border: none; cursor: pointer; color: var(--accent); font-size: 1.2rem; padding: 4px; }
-  .chat-topbar-name { font-weight: 700; font-size: 0.95rem; }
-  .chat-topbar-sub { font-size: 0.75rem; color: var(--text-muted); }
-  .chat-messages { flex: 1; overflow-y: auto; padding: 16px; padding-bottom: 120px; display: flex; flex-direction: column; gap: 10px; }
-  .msg-bubble { max-width: 78%; padding: 10px 14px; border-radius: 14px; font-size: 0.9rem; line-height: 1.45; position: relative; }
-  .msg-bubble.mine { background: var(--accent2); color: #fff; border-radius: 14px 14px 4px 14px; align-self: flex-end; }
-  .msg-bubble.theirs { background: var(--bg-card2); border: 1px solid var(--border); border-radius: 14px 14px 14px 4px; align-self: flex-start; }
-  .msg-sender { font-size: 0.72rem; color: rgba(255,255,255,0.6); margin-bottom: 3px; font-weight: 600; }
-  .msg-time { font-size: 0.68rem; color: rgba(255,255,255,0.45); margin-top: 4px; text-align: right; }
-  .msg-bubble.theirs .msg-time { color: var(--text-muted); }
-  .msg-reply-ref { background: rgba(0,0,0,0.2); border-left: 3px solid rgba(255,255,255,0.4); border-radius: 6px; padding: 5px 8px; margin-bottom: 6px; font-size: 0.78rem; opacity: 0.8; }
-  .msg-img { max-width: 100%; border-radius: 8px; margin-top: 6px; cursor: pointer; }
-  .msg-file { display: flex; align-items: center; gap: 8px; margin-top: 6px; padding: 8px 10px; background: rgba(0,0,0,0.2); border-radius: 8px; font-size: 0.82rem; text-decoration: none; color: inherit; }
-  .chat-input-wrap { display: flex; gap: 10px; padding: 8px 16px; padding-bottom: max(8px, env(safe-area-inset-bottom)); padding-top: 8px; border-top: 1px solid var(--border); background: rgba(4,13,26,0.98); position: fixed; bottom: 0; left: 0; right: 0; z-index: 120; align-items: flex-end; }
-  .chat-input { flex: 1; padding: 10px 14px; background: var(--bg-card2); border: 1px solid var(--border); border-radius: 20px; color: var(--text-primary); font-family: inherit; font-size: 0.9rem; outline: none; transition: border-color 0.2s; resize: none; max-height: 100px; }
-  .chat-input:focus { border-color: var(--accent); }
-  .chat-send-btn { width: 40px; height: 40px; border-radius: 50%; background: var(--accent2); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-  .chat-send-btn svg { width: 18px; height: 18px; color: #fff; }
-  .chat-attach-btn { width: 36px; height: 36px; border-radius: 50%; background: transparent; border: 1px solid var(--border); cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: var(--text-secondary); }
-  .chat-disabled-note { background: rgba(255,64,96,0.08); border: 1px solid rgba(255,64,96,0.2); border-radius: var(--radius-sm); padding: 12px; text-align: center; font-size: 0.82rem; color: var(--danger); margin: 12px 16px; }
-  .reply-bar { display: flex; align-items: center; gap: 10px; padding: 8px 16px; background: rgba(0,100,200,0.1); border-top: 1px solid var(--border); font-size: 0.82rem; color: var(--text-secondary); flex-shrink: 0; }
-  .reply-bar-close { margin-left: auto; background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 1rem; }
 
   /* SETTINGS */
   .photo-upload { display: flex; align-items: center; gap: 16px; }
@@ -439,31 +404,6 @@
       <div id="recoveryContent"><div class="empty-state"><p>Wähle einen Tag oben</p></div></div>
       <div id="recoveryFabArea"></div>
     </div>
-
-    <!-- CHAT -->
-    <div class="page" id="chatPage">
-      <div id="chatListView">
-        <div style="padding:16px 16px 8px;"><div class="section-title" style="margin:0;">Nachrichten</div></div>
-        <div id="chatListItems"></div>
-      </div>
-      <div id="chatView">
-        <div class="chat-topbar">
-          <button class="chat-topbar-back" onclick="closeChatView()">←</button>
-          <div class="chat-avatar" id="chatViewAvatar">?</div>
-          <div style="flex:1;">
-            <div class="chat-topbar-name" id="chatViewName"></div>
-            <div class="chat-topbar-sub" id="chatViewSub"></div>
-          </div>
-          <div id="chatAdminControls"></div>
-        </div>
-        <div class="chat-messages" id="chatMessages"></div>
-        <div id="replyBar" style="display:none;" class="reply-bar">
-          <span>↩️ Antwort auf: </span><span id="replyPreview" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
-          <button class="reply-bar-close" onclick="cancelReply()">✕</button>
-        </div>
-        <div id="chatInputArea"></div>
-      </div>
-    </div>
   </div>
 
   <!-- BOTTOM NAV (7 items) -->
@@ -491,10 +431,6 @@
     <button class="nav-item" onclick="goTo('recovery')" id="nav-recovery">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
       <span class="nav-label">Krank</span>
-    </button>
-    <button class="nav-item" onclick="goTo('chat')" id="nav-chat">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-      <span class="nav-label">Chat</span>
     </button>
   </nav>
 </div>
@@ -653,7 +589,7 @@ document.head.appendChild(tesseractScript);
 
 // ── STATE ────────────────────────────────────────
 let currentUser = null, users = {}, homework = [], events = [], chats = {}, wishes = [];
-let currentPage = 'home', currentChatId = null, addingFor = 'homework';
+let currentPage = 'home', addingFor = 'homework';
 let hwFilter = 'upcoming', testFilter = 'upcoming', eventFilter = 'upcoming';
 let signupTempEmail = '', signupTempPw = '', signupIsAdmin = false;
 let isRegistering = false;
@@ -668,7 +604,6 @@ let notifSettings = JSON.parse(localStorage.getItem('notifSettings') || '{"all":
 let ttCache = JSON.parse(localStorage.getItem('ttCache') || '{}');
 let ttCacheTime = JSON.parse(localStorage.getItem('ttCacheTime') || '{}');
 // Chat file uploads
-let chatUploadFiles = [];
 
 // Teacher Names: Abkürzung -> {fullName, gender} Mapping - exakt aus lehre.csv
 let teacherNames = {
@@ -819,7 +754,6 @@ async function saveData() {
 }
 
 function startRealtimeListeners() {
-  onSnapshot(doc(db,'appdata','chats'), s => { if(s.exists()){chats=s.data().value||{}; if(currentChatId)renderMessages(); if(currentPage==='chat')renderChatList();} });
   onSnapshot(doc(db,'appdata','homework'), s => { if(s.exists()){homework=s.data().value||[]; if(currentPage==='homework')renderHW(); if(currentPage==='tests')renderTests(); if(currentPage==='home')renderHome();} });
   onSnapshot(doc(db,'appdata','events'), s => { if(s.exists()){events=s.data().value||[]; if(currentPage==='events')renderEvents(); if(currentPage==='home')renderHome();} });
   onSnapshot(doc(db,'appdata','users'), s => { if(s.exists())users=s.data().value||{}; });
@@ -1290,16 +1224,12 @@ function goTo(page) {
   document.getElementById('nav-'+page)?.classList.add('active');
   document.getElementById('topbarTitle').textContent=pageTitles[page]||'';
   document.getElementById('fabBtn').style.display='none';
-  const clv=document.getElementById('chatListView'),cv=document.getElementById('chatView');
-  if(page==='chat'){clv.style.display='block';cv.classList.remove('active');}
-  else{clv.style.display='none';}
   if(page==='home')renderHome();
   if(page==='timetable')renderTimetable();
   if(page==='homework'){renderHW();if(canEdit())document.getElementById('fabBtn').style.display='flex';}
   if(page==='tests'){renderTests();if(canEdit())document.getElementById('fabBtn').style.display='flex';}
   if(page==='events'){renderEvents();if(canEdit())document.getElementById('fabBtn').style.display='flex';}
   if(page==='recovery')renderRecovery();
-  if(page==='chat')renderChatList();
 }
 window.goTo=goTo;
 
@@ -2216,212 +2146,6 @@ async function saveNewItem(){
   renderHome();
 }
 window.saveNewItem=saveNewItem;
-
-// ── CHAT ──────────────────────────────────────────
-function renderChatList(){
-  const el=document.getElementById('chatListItems');if(!el)return;
-  const myChats=Object.values(chats).filter(c=>c.members?.includes(currentUser.email)||c.id==='class');
-  const newBtn=`<div style="padding:12px 16px;"><button class="btn btn-secondary" onclick="openNewChat()" style="font-size:0.82rem;">+ Neuer Chat / Gruppe</button></div><div class="divider" style="margin:0;"></div>`;
-  if(!myChats.length){el.innerHTML=newBtn+`<div class="empty-state">Noch keine Chats</div>`;return;}
-  el.innerHTML=newBtn+myChats.map(c=>{
-    const last=c.messages?.[c.messages.length-1];
-    const name=c.name||getOtherUser(c)?.name||'Chat';
-    const preview=last?(last.text||(last.image?'📷 Bild':(last.file?'📎 Datei':''))):'Keine Nachrichten';
-    const ts=last?formatChatTime(last.ts):'';
-    return `<div class="chat-list-item" onclick="openChat('${c.id}')">
-      <div class="chat-avatar">${getUserPhoto(c.id==='class'?null:getOtherUser(c),name)}</div>
-      <div style="flex:1;min-width:0;">
-        <div style="display:flex;justify-content:space-between;"><span class="chat-name">${name}${c.id==='class'?' <span class="badge badge-accent" style="font-size:0.65rem;">Klasse</span>':''}</span><span class="chat-meta">${ts}</span></div>
-        <div class="chat-preview">${preview.slice(0,60)}</div>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-function getUserPhoto(user,name){
-  if(user?.photo)return `<img src="${user.photo}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
-  return name?.[0]?.toUpperCase()||'?';
-}
-
-function getOtherUser(chat){const other=chat.members?.find(m=>m!==currentUser.email);return other?users[other]:null;}
-
-function formatChatTime(ts){
-  if(!ts)return '';const d=new Date(ts),now=new Date();
-  if(d.toDateString()===now.toDateString())return d.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
-  return d.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'});
-}
-
-function openChat(chatId){
-  currentChatId=chatId; replyingTo=null; chatUploadFiles=[];
-  const chat=chats[chatId];
-  const isGroup=chat.type==='group'||chatId==='class';
-  const name=chat.name||getOtherUser(chat)?.name||'Chat';
-  document.getElementById('chatViewName').textContent=name;
-  document.getElementById('chatViewSub').textContent=isGroup?`${chat.members?.length||1} Mitglieder`:'Direktnachricht';
-  const av=document.getElementById('chatViewAvatar');
-  const other=getOtherUser(chat);
-  if(other?.photo)av.innerHTML=`<img src="${other.photo}">`;
-  else av.textContent=name[0]?.toUpperCase();
-  document.getElementById('chatListView').style.display='none';
-  document.getElementById('chatView').classList.add('active');
-  document.getElementById('bottomNav').style.display='none';
-  document.getElementById('replyBar').style.display='none';
-  document.getElementById('chatAdminControls').innerHTML=currentUser.isAdmin&&chatId==='class'?`<button class="icon-btn" onclick="openMuteControls()">⚙️</button>`:'';
-  const muted=chat.mutedUsers?.includes(currentUser.email);
-  document.getElementById('chatInputArea').innerHTML=muted
-    ?`<div class="chat-disabled-note">Du wurdest stummgeschaltet.</div>`
-    :`<div style="position:fixed;bottom:0;left:0;right:0;z-index:120;background:rgba(4,13,26,0.98);padding:8px 16px;border-top:1px solid var(--border);display:flex;flex-direction:column;max-height:40vh;">
-        <div id="chatFilePreview" style="display:flex;gap:6px;flex-wrap:wrap;overflow-y:auto;margin-bottom:8px;max-height:120px;"></div>
-        <div class="chat-input-wrap">
-          <input type="file" id="chatFileInput" style="display:none;" accept="image/*,.pdf,.doc,.docx" multiple onchange="handleChatFile(event)">
-          <button class="chat-attach-btn" onclick="document.getElementById('chatFileInput').click()" title="Anhang">📎</button>
-          <textarea class="chat-input" id="chatMsgInput" placeholder="Nachricht schreiben…" rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage();}"></textarea>
-          <button class="chat-send-btn" onclick="sendMessage()"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
-        </div>
-      </div>`;
-  renderMessages();
-}
-window.openChat=openChat;
-
-function closeChatView(){document.getElementById('chatView').classList.remove('active');document.getElementById('bottomNav').style.display='flex';document.getElementById('chatListView').style.display='block';currentChatId=null;chatUploadFiles=[];renderChatList();}
-window.closeChatView=closeChatView;
-
-function renderMessages(){
-  const chat=chats[currentChatId];const el=document.getElementById('chatMessages');
-  if(!el||!chat?.messages?.length){if(el)el.innerHTML=`<div class="empty-state">Keine Nachrichten</div>`;return;}
-  el.innerHTML=chat.messages.map((m,idx)=>{
-    if(m.sender==='system')return `<div style="text-align:center;font-size:0.78rem;color:var(--text-muted);padding:6px 0;">${m.text}</div>`;
-    const mine=m.sender===currentUser.email;
-    const sender=users[m.sender];
-    const senderName=sender?.name||m.sender;
-    const replyHtml=m.replyTo?`<div class="msg-reply-ref">↩️ ${m.replyTo.slice(0,50)}</div>`:'';
-    const imgHtml=m.image?`<img class="msg-img" src="${m.image}" onclick="window.open('${m.image}','_blank')" alt="Bild">`:'';
-    const fileHtml=m.file?`<a class="msg-file" href="${m.file.data}" download="${m.file.name}">📎 ${m.file.name}</a>`:'';
-    const filesHtml=m.files?m.files.map(f=>f.type.startsWith('image/')?`<img class="msg-img" src="${f.data}" onclick="window.open('${f.data}','_blank')" alt="Bild">` : `<a class="msg-file" href="${f.data}" download="${f.name}">📎 ${f.name}</a>`).join(''):'';
-    return `<div class="msg-bubble ${mine?'mine':'theirs'}" ondblclick="setReply('${m.id}','${(m.text||'[Anhang]').replace(/'/g,"\\'")}')">";
-      ${!mine&&(chat.type==='group'||chat.id==='class')?`<div class="msg-sender">${senderName}${sender?.isAdmin?' 👑':''}</div>`:''}
-      ${replyHtml}${imgHtml}${fileHtml}${filesHtml}
-      ${m.text?m.text:''}
-      <div class="msg-time">${formatChatTime(m.ts)}</div>
-    </div>`;
-  }).join('');
-  el.scrollTop=el.scrollHeight;
-}
-
-function setReply(msgId,preview){
-  replyingTo={id:msgId,preview};
-  document.getElementById('replyBar').style.display='flex';
-  document.getElementById('replyPreview').textContent=preview;
-  document.getElementById('chatMsgInput')?.focus();
-}
-window.setReply=setReply;
-
-function cancelReply(){replyingTo=null;document.getElementById('replyBar').style.display='none';}
-window.cancelReply=cancelReply;
-
-async function sendMessage(){
-  const input=document.getElementById('chatMsgInput');if(!input)return;
-  const text=input.value.trim();
-  if(!text&&chatUploadFiles.length===0)return;
-  if(!chats[currentChatId].messages)chats[currentChatId].messages=[];
-  
-  // Combine text and files in ONE message
-  const msg={id:uid(),sender:currentUser.email,ts:Date.now()};
-  if(text)msg.text=text;
-  if(chatUploadFiles.length>0)msg.files=chatUploadFiles.map(f=>({name:f.name,data:f.data,type:f.type}));
-  if(replyingTo)msg.replyTo=replyingTo.preview;
-  
-  chats[currentChatId].messages.push(msg);
-  chatUploadFiles=[];
-  updateChatFilePreview();
-  input.value=''; cancelReply();
-  await saveData(); renderMessages();
-}
-window.sendMessage=sendMessage;
-
-async function handleChatFile(e){
-  Array.from(e.target.files).forEach(file => {
-    const reader = new FileReader();
-    reader.onload = ev => {
-      chatUploadFiles.push({name:file.name,data:ev.target.result,type:file.type});
-      updateChatFilePreview();
-    };
-    reader.readAsDataURL(file);
-  });
-  e.target.value='';
-}
-window.handleChatFile=handleChatFile;
-
-function updateChatFilePreview(){
-  const preview = document.getElementById('chatFilePreview');
-  if(!preview) return;
-  preview.innerHTML = chatUploadFiles.map((f,idx) => {
-    const isImage = f.type.startsWith('image/');
-    return `
-      <div class="chat-file-preview-item">
-        ${isImage ? `<img src="${f.data}" alt="preview">` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:0.6rem;overflow:hidden;">📎</div>`}
-        <button class="chat-file-remove" onclick="removeChatFile(${idx})">✕</button>
-      </div>
-    `;
-  }).join('');
-}
-window.updateChatFilePreview=updateChatFilePreview;
-
-function removeChatFile(idx){
-  chatUploadFiles.splice(idx,1);
-  updateChatFilePreview();
-}
-window.removeChatFile=removeChatFile;
-
-function openNewChat(){
-  const others=Object.values(users).filter(u=>u.email!==currentUser.email);
-  document.getElementById('newChatUserList').innerHTML=others.length===0?'<p style="color:var(--text-muted);font-size:0.85rem;">Noch keine anderen Nutzer.</p>':
-    others.map(u=>`<div class="chat-list-item" onclick="startDirectChat('${u.email}')" style="cursor:pointer;"><div class="chat-avatar">${u.photo?`<img src="${u.photo}">`:(u.name[0].toUpperCase())}</div><div><div class="chat-name">${u.name}</div><div class="chat-preview">${u.isAdmin?'👑 Admin':'Schüler'}</div></div></div>`).join('');
-  openModal('newChatOverlay');
-}
-window.openNewChat=openNewChat;
-
-async function startDirectChat(userEmail){
-  const existingId=Object.keys(chats).find(id=>{const c=chats[id];return c.type==='dm'&&c.members?.includes(currentUser.email)&&c.members?.includes(userEmail);});
-  closeModal('newChatOverlay');
-  if(existingId){openChat(existingId);return;}
-  const id=uid();
-  chats[id]={id,type:'dm',members:[currentUser.email,userEmail],messages:[],mutedUsers:[]};
-  await saveData(); goTo('chat'); openChat(id);
-}
-window.startDirectChat=startDirectChat;
-
-function openNewGroupModal(){
-  closeModal('newChatOverlay');
-  const others=Object.values(users).filter(u=>u.email!==currentUser.email);
-  document.getElementById('groupMemberList').innerHTML=others.map(u=>`<label style="display:flex;align-items:center;gap:10px;padding:8px 0;cursor:pointer;"><input type="checkbox" value="${u.email}" style="accent-color:var(--accent);"><span>${u.name}</span></label>`).join('');
-  openModal('newGroupOverlay');
-}
-window.openNewGroupModal=openNewGroupModal;
-
-async function createGroup(){
-  const name=document.getElementById('groupName').value.trim();if(!name)return alert('Gruppenname eingeben.');
-  const checked=[...document.querySelectorAll('#groupMemberList input:checked')].map(i=>i.value);
-  const id=uid();
-  chats[id]={id,type:'group',name,members:[currentUser.email,...checked],messages:[{id:uid(),sender:'system',text:`Gruppe "${name}" erstellt.`,ts:Date.now()}],mutedUsers:[]};
-  await saveData(); closeModal('newGroupOverlay'); goTo('chat'); openChat(id);
-}
-window.createGroup=createGroup;
-
-function openMuteControls(){
-  const chat=chats['class'];const members=chat.members?.map(e=>users[e]).filter(Boolean)||[];
-  document.getElementById('adminSettingsSection').innerHTML=`<div class="admin-section"><h4>🔇 CHAT-VERWALTUNG</h4>${members.filter(u=>u.email!==currentUser.email).map(u=>`<div class="admin-user-row"><span class="admin-user-name">${u.name}</span><label class="toggle"><input type="checkbox" ${!chat.mutedUsers?.includes(u.email)?'checked':''} onchange="toggleMute('${u.email}',this.checked)"><span class="toggle-slider"></span></label></div>`).join('')}</div>`;
-  openModal('settingsOverlay');
-}
-window.openMuteControls=openMuteControls;
-
-async function toggleMute(email,canChat){
-  const chat=chats['class'];if(!chat.mutedUsers)chat.mutedUsers=[];
-  if(canChat)chat.mutedUsers=chat.mutedUsers.filter(e=>e!==email);
-  else if(!chat.mutedUsers.includes(email))chat.mutedUsers.push(email);
-  await saveData();
-}
-window.toggleMute=toggleMute;
 
 // ── WISHES ────────────────────────────────────────
 function openWishes(){
