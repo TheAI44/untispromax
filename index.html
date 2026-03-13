@@ -528,11 +528,6 @@
       <h4>🎨 DARSTELLUNG</h4>
       <div class="notif-row"><span class="notif-label">☀️ Light Mode</span><label class="toggle"><input type="checkbox" id="toggleLightMode" onchange="applyTheme(this.checked)"><span class="toggle-slider"></span></label></div>
     </div>
-    <div class="notif-section" style="margin-top:10px;">
-      <h4>🔔 BENACHRICHTIGUNGEN</h4>
-      <div class="notif-row"><span class="notif-label">Chat-Benachrichtigungen</span><label class="toggle"><input type="checkbox" id="notifChat" onchange="saveNotifSettings()"><span class="toggle-slider"></span></label></div>
-      <div class="notif-row"><span class="notif-label">Hausaufgaben &lt; 24h</span><label class="toggle"><input type="checkbox" id="notifHw24" onchange="saveNotifSettings()"><span class="toggle-slider"></span></label></div>
-    </div>
     <div id="adminSettingsSection"></div>
     <div id="wishSendSection"></div>
     <div class="divider"></div>
@@ -1067,7 +1062,6 @@ onAuthStateChanged(auth, async fbUser => {
 function initApp() {
   updateAvatar();
   startClock();
-  loadNotifSettings();
   if(currentUser.isAdmin){ document.getElementById('adminNotifBtn').style.display='flex'; }
   goTo('home');
   // Preload timetable in background (no await, just start it)
@@ -2468,7 +2462,6 @@ function openSettings(){
   const prev=document.getElementById('settingsPhotoPreview');
   if(currentUser.photo)prev.innerHTML=`<img src="${currentUser.photo}">`;
   else prev.textContent=currentUser.name?.[0]?.toUpperCase()||'?';
-  loadNotifSettings();
   const adminSec=document.getElementById('adminSettingsSection');
   if(currentUser.isAdmin){
     const others=Object.values(users).filter(u=>u.email!==currentUser.email);
@@ -2550,22 +2543,6 @@ async function saveSettings(){
   await saveData(); updateAvatar(); closeModal('settingsOverlay');
 }
 window.saveSettings=saveSettings;
-
-function loadNotifSettings(){
-  const nc=document.getElementById('notifChat');
-  const nh=document.getElementById('notifHw24');
-  if(nc)nc.checked=notifSettings.chat;
-  if(nh)nh.checked=notifSettings.hw24;
-  const lt=document.getElementById('toggleLightMode');
-  if(lt)lt.checked=document.body.classList.contains('light-mode');
-}
-function saveNotifSettings(){
-  const nc=document.getElementById('notifChat');
-  const nh=document.getElementById('notifHw24');
-  notifSettings={all:true,chat:nc?nc.checked:false,hw24:nh?nh.checked:false};
-  localStorage.setItem('notifSettings',JSON.stringify(notifSettings));
-}
-window.saveNotifSettings=saveNotifSettings;
 
 // ── THEME ─────────────────────────────────────────
 function applyTheme(isLight){
