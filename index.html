@@ -1093,6 +1093,7 @@ function changeWeek(dir) {
   const btns = document.querySelectorAll('.tt-nav-btn');
   if(btns[0]) btns[0].disabled = ttWeekOffset <= TT_MIN_OFFSET;
   if(btns[2]) btns[2].disabled = ttWeekOffset >= TT_MAX_OFFSET;
+  buildDayTabs();
   ttData=null; loadTimetableData();
 }
 window.changeWeek=changeWeek;
