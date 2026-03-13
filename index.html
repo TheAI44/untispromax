@@ -311,8 +311,8 @@
     <div id="msgBox"></div>
     <!-- LOGIN -->
     <div id="loginForm">
-      <div class="form-group"><label class="form-label">E-Mail-Adresse</label><input class="form-input" type="email" id="loginEmail" placeholder="deine@email.de"></div>
-      <div class="form-group"><label class="form-label">Passwort</label><input class="form-input" type="password" id="loginPassword" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"></div>
+      <div class="form-group"><label class="form-label" for="loginEmail">E-Mail-Adresse</label><input class="form-input" type="email" id="loginEmail" placeholder="deine@email.de"></div>
+      <div class="form-group"><label class="form-label" for="loginPassword">Passwort</label><input class="form-input" type="password" id="loginPassword" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"></div>
       <button class="btn btn-primary" onclick="doLogin()">Anmelden</button>
     </div>
     <!-- SIGNUP -->
@@ -323,8 +323,8 @@
         <div class="step-dot" id="dot3"></div>
       </div>
       <div id="step1">
-        <div class="form-group"><label class="form-label">E-Mail-Adresse</label><input class="form-input" type="email" id="regEmail" placeholder="deine@email.de"></div>
-        <div class="form-group"><label class="form-label">Passwort</label><input class="form-input" type="password" id="regPassword" placeholder="Mindestens 6 Zeichen"></div>
+        <div class="form-group"><label class="form-label" for="regEmail">E-Mail-Adresse</label><input class="form-input" type="email" id="regEmail" placeholder="deine@email.de"></div>
+        <div class="form-group"><label class="form-label" for="regPassword">Passwort</label><input class="form-input" type="password" id="regPassword" placeholder="Mindestens 6 Zeichen"></div>
         <button class="btn btn-primary" onclick="signupStep1()">Weiter</button>
       </div>
       <div id="step2" style="display:none;">
@@ -333,7 +333,7 @@
           <div style="font-size:1rem;font-weight:600;margin-bottom:6px;">Zugangscode eingeben</div>
           <div style="font-size:0.83rem;color:var(--text-secondary);">Gib den Code ein, den du erhalten hast.</div>
         </div>
-        <div class="form-group"><label class="form-label">Zugangscode</label><input class="form-input" type="text" id="classCode" placeholder="••••••" style="text-align:center;letter-spacing:6px;font-weight:700;font-size:1.1rem;" onkeydown="if(event.key==='Enter')signupStep3()"></div>
+        <div class="form-group"><label class="form-label" for="classCode">Zugangscode</label><input class="form-input" type="text" id="classCode" placeholder="••••••" style="text-align:center;letter-spacing:6px;font-weight:700;font-size:1.1rem;" onkeydown="if(event.key==='Enter')signupStep3()"></div>
         <button class="btn btn-primary" onclick="signupStep3()">Code prüfen</button>
       </div>
       <div id="step3" style="display:none;">
@@ -342,7 +342,7 @@
           <div style="font-size:1rem;font-weight:600;margin-bottom:6px;">Wie heißt du?</div>
           <div style="font-size:0.83rem;color:var(--text-secondary);">Deine Mitschüler sehen diesen Namen.</div>
         </div>
-        <div class="form-group"><label class="form-label">Vollständiger Name</label><input class="form-input" type="text" id="regName" placeholder="Vorname Nachname" onkeydown="if(event.key==='Enter')signupStep3b()"></div>
+        <div class="form-group"><label class="form-label" for="regName">Vollständiger Name</label><input class="form-input" type="text" id="regName" placeholder="Vorname Nachname" onkeydown="if(event.key==='Enter')signupStep3b()"></div>
         <button class="btn btn-primary" onclick="signupStep3b()">Konto erstellen</button>
       </div>
     </div>
@@ -520,8 +520,8 @@
         </div>
       </div>
     </div>
-    <div class="form-group"><label class="form-label">Anzeigename</label><input class="form-input" type="text" id="settingsName" placeholder="Dein Name"></div>
-    <div class="form-group"><label class="form-label">E-Mail</label><input class="form-input" type="email" id="settingsEmail" disabled style="opacity:0.6;"></div>
+    <div class="form-group"><label class="form-label" for="settingsName">Anzeigename</label><input class="form-input" type="text" id="settingsName" placeholder="Dein Name"></div>
+    <div class="form-group"><label class="form-label" for="settingsEmail">E-Mail</label><input class="form-input" type="email" id="settingsEmail" disabled style="opacity:0.6;"></div>
     <div class="notif-section">
       <h4>🎨 DARSTELLUNG</h4>
       <div class="notif-row"><span class="notif-label">☀️ Light Mode</span><label class="toggle"><input type="checkbox" id="toggleLightMode" onchange="applyTheme(this.checked)"><span class="toggle-slider"></span></label></div>
@@ -669,25 +669,51 @@ let ttCacheTime = JSON.parse(localStorage.getItem('ttCacheTime') || '{}');
 let chatUploadFiles = [];
 
 // ── FIRESTORE ────────────────────────────────────
-async function fbGet(id) { const s = await getDoc(doc(db,'appdata',id)); return s.exists() ? s.data().value : null; }
-async function fbSet(id, v) { await setDoc(doc(db,'appdata',id), {value: v}); }
+async function fbGet(id) { 
+  try {
+    const s = await getDoc(doc(db,'appdata',id)); 
+    return s.exists() ? s.data().value : null; 
+  } catch(e) {
+    console.error('[DEBUG] fbGet error for', id, ':', e.code, e.message);
+    return null;
+  }
+}
+async function fbSet(id, v) { 
+  try {
+    await setDoc(doc(db,'appdata',id), {value: v}); 
+  } catch(e) {
+    console.error('[DEBUG] fbSet error for', id, ':', e.code, e.message);
+  }
+}
 
 async function loadAllData() {
-  const [hw,ev,us,ch,wi,rec,tt] = await Promise.all([fbGet('homework'),fbGet('events'),fbGet('users'),fbGet('chats'),fbGet('wishes'),fbGet('recovery'),fbGet('timetables')]);
-  homework = hw || getSampleHW(); events = ev || getSampleEvents();
-  users = us || {}; chats = ch || {}; wishes = wi || []; recoveryEntries = rec || {};
-  timetables = tt || {};
-  if (!hw) await fbSet('homework', homework);
-  if (!ev) await fbSet('events', events);
-  if (!us) await fbSet('users', users);
-  if (!ch) await fbSet('chats', chats);
-  if (!wi) await fbSet('wishes', wishes);
-  if (!rec) await fbSet('recovery', recoveryEntries);
-  if (!tt) await fbSet('timetables', timetables);
+  try {
+    console.log('[DEBUG] Loading all data from Firestore...');
+    const [hw,ev,us,ch,wi,rec,tt] = await Promise.all([fbGet('homework'),fbGet('events'),fbGet('users'),fbGet('chats'),fbGet('wishes'),fbGet('recovery'),fbGet('timetables')]);
+    homework = hw || getSampleHW(); events = ev || getSampleEvents();
+    users = us || {}; chats = ch || {}; wishes = wi || []; recoveryEntries = rec || {};
+    timetables = tt || {};
+    if (!hw) await fbSet('homework', homework);
+    if (!ev) await fbSet('events', events);
+    if (!us) await fbSet('users', users);
+    if (!ch) await fbSet('chats', chats);
+    if (!wi) await fbSet('wishes', wishes);
+    if (!rec) await fbSet('recovery', recoveryEntries);
+    if (!tt) await fbSet('timetables', timetables);
+    console.log('[DEBUG] All data loaded. Users:', Object.keys(users).length);
+  } catch(e) {
+    console.error('[DEBUG] Error loading data:', e);
+  }
 }
 
 async function saveData() {
-  await Promise.all([fbSet('homework',homework),fbSet('events',events),fbSet('users',users),fbSet('chats',chats),fbSet('wishes',wishes),fbSet('timetables',timetables)]);
+  try {
+    console.log('[DEBUG] Saving all data...');
+    await Promise.all([fbSet('homework',homework),fbSet('events',events),fbSet('users',users),fbSet('chats',chats),fbSet('wishes',wishes),fbSet('timetables',timetables)]);
+    console.log('[DEBUG] Data saved successfully');
+  } catch(e) {
+    console.error('[DEBUG] Error saving data:', e);
+  }
 }
 
 function startRealtimeListeners() {
@@ -787,8 +813,24 @@ async function doLogin() {
   const pw=document.getElementById('loginPassword').value;
   if(!email||!pw)return showMsg('Bitte alle Felder ausfüllen.');
   showMsg('Anmelden…','info');
-  try { await signInWithEmailAndPassword(auth,email,pw); }
-  catch(e){ showMsg('E-Mail oder Passwort falsch.'); }
+  try { 
+    console.log('[DEBUG] Login attempt:', email);
+    await signInWithEmailAndPassword(auth,email,pw); 
+    console.log('[DEBUG] Login successful');
+  }
+  catch(e){ 
+    console.error('[DEBUG] Login error:', e.code, e.message);
+    const errorMap = {
+      'auth/user-not-found': '❌ Konto existiert nicht. Registriere dich zuerst.',
+      'auth/wrong-password': '❌ Passwort falsch.',
+      'auth/invalid-email': '❌ Ungültige E-Mail-Adresse.',
+      'auth/user-disabled': '❌ Konto wurde deaktiviert.',
+      'auth/network-request-failed': '❌ Netzwerkfehler. Prüfe deine Internetverbindung.',
+      'PERMISSION_DENIED': '❌ Firebase-Fehler: Keine Berechtigung. Kontaktiere deinen Admin.'
+    };
+    const msg = errorMap[e.code] || ('❌ Fehler: ' + e.message);
+    showMsg(msg); 
+  }
 }
 window.doLogin=doLogin;
 
@@ -818,21 +860,34 @@ async function signupStep3b() {
   showMsg('Konto wird erstellt…','info');
   isRegistering=true;
   try {
+    console.log('[DEBUG] Signup: Loading data...');
     await loadAllData();
+    console.log('[DEBUG] Signup: Creating user:', signupTempEmail);
     const cred=await createUserWithEmailAndPassword(auth,signupTempEmail,signupTempPw);
+    console.log('[DEBUG] Signup: User created, uid:', cred.user.uid);
     users[signupTempEmail]={email:signupTempEmail,name,isAdmin:signupIsAdmin,canPost:true,canChat:true,photo:null,id:cred.user.uid,joinedAt:new Date().toISOString()};
     if(!chats['class'])initClassChat();
     if(!chats['class'].members.includes(signupTempEmail))chats['class'].members.push(signupTempEmail);
+    console.log('[DEBUG] Signup: Saving data...');
     await saveData();
+    console.log('[DEBUG] Signup: Success!');
     isRegistering=false;
     currentUser=users[signupTempEmail];
     document.getElementById('authScreen').classList.add('hidden');
     document.getElementById('appScreen').classList.remove('hidden');
     startRealtimeListeners(); initApp();
   } catch(e) {
+    console.error('[DEBUG] Signup error:', e.code, e.message);
     isRegistering=false;
-    if(e.code==='auth/email-already-in-use')showMsg('E-Mail bereits registriert. Bitte anmelden.');
-    else showMsg('Fehler: '+e.message);
+    const errorMap = {
+      'auth/email-already-in-use': '❌ E-Mail bereits registriert. Bitte anmelden.',
+      'auth/weak-password': '❌ Passwort zu schwach (min. 6 Zeichen).',
+      'auth/invalid-email': '❌ Ungültige E-Mail-Adresse.',
+      'auth/network-request-failed': '❌ Netzwerkfehler. Prüfe deine Internetverbindung.',
+      'PERMISSION_DENIED': '❌ Firebase-Fehler: Keine Berechtigung. Kontaktiere deinen Admin.'
+    };
+    const msg = errorMap[e.code] || ('❌ Fehler: ' + e.message);
+    showMsg(msg);
   }
 }
 window.signupStep3b=signupStep3b;
@@ -849,37 +904,46 @@ function initClassChat() {
 }
 
 async function loginSuccess(fbUser) {
-  await loadAllData();
-  let profile = users[fbUser.email?.toLowerCase()];
+  try {
+    console.log('[DEBUG] Login success for user:', fbUser.email);
+    await loadAllData();
+    let profile = users[fbUser.email?.toLowerCase()];
 
-  // Profil existiert nicht mehr in Firestore aber Firebase Auth ist noch aktiv
-  // → Notfall-Profil erstellen damit kein Logout-Loop entsteht
-  if(!profile) {
-    const name = fbUser.displayName || fbUser.email.split('@')[0];
-    const adminTaken = Object.values(users).some(u => u.isAdmin);
-    profile = {
-      email: fbUser.email.toLowerCase(),
-      name,
-      isAdmin: !adminTaken, // Erster wird automatisch Admin
-      canPost: true,
-      canChat: true,
-      photo: null,
-      id: fbUser.uid,
-      joinedAt: new Date().toISOString(),
-      recovered: true
-    };
-    users[profile.email] = profile;
+    // Profil existiert nicht mehr in Firestore aber Firebase Auth ist noch aktiv
+    // → Notfall-Profil erstellen damit kein Logout-Loop entsteht
+    if(!profile) {
+      console.log('[DEBUG] Profile not found, creating recovery profile...');
+      const name = fbUser.displayName || fbUser.email.split('@')[0];
+      const adminTaken = Object.values(users).some(u => u.isAdmin);
+      profile = {
+        email: fbUser.email.toLowerCase(),
+        name,
+        isAdmin: !adminTaken, // Erster wird automatisch Admin
+        canPost: true,
+        canChat: true,
+        photo: null,
+        id: fbUser.uid,
+        joinedAt: new Date().toISOString(),
+        recovered: true
+      };
+      users[profile.email] = profile;
+      if(!chats['class'])initClassChat();
+      if(!chats['class'].members.includes(profile.email))chats['class'].members.push(profile.email);
+      await saveData();
+      console.log('[DEBUG] Recovery profile created');
+    }
+
+    currentUser = profile;
     if(!chats['class'])initClassChat();
-    if(!chats['class'].members.includes(profile.email))chats['class'].members.push(profile.email);
-    await saveData();
+    if(!chats['class'].members.includes(currentUser.email)){chats['class'].members.push(currentUser.email);await saveData();}
+    document.getElementById('authScreen').classList.add('hidden');
+    document.getElementById('appScreen').classList.remove('hidden');
+    console.log('[DEBUG] App initialized for user:', currentUser.email);
+    startRealtimeListeners(); initApp();
+  } catch(e) {
+    console.error('[DEBUG] loginSuccess error:', e.code || e, e.message);
+    showMsg('❌ Fehler beim Anmelden: ' + e.message);
   }
-
-  currentUser = profile;
-  if(!chats['class'])initClassChat();
-  if(!chats['class'].members.includes(currentUser.email)){chats['class'].members.push(currentUser.email);await saveData();}
-  document.getElementById('authScreen').classList.add('hidden');
-  document.getElementById('appScreen').classList.remove('hidden');
-  startRealtimeListeners(); initApp();
 }
 
 async function logout() { await signOut(auth); location.reload(); }
