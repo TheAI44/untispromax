@@ -1218,8 +1218,16 @@ function renderDayLessons(idx) {
               <div class="lesson-room">${l.teacher} · ${l.room}${l.note?' · '+l.note:''}</div>
             </div>
           </div>
-        </div>`;\n      }).join('')}
-    </div>`;\n  }).join('');\n}\n\nfunction parseTime(timeStr) {\n  const [h,m] = timeStr.split(':').map(Number);\n  return h*60 + m;\n}
+        </div>`;
+      }).join('')}
+    </div>`;
+  }).join('');
+}
+
+function parseTime(timeStr) {
+  const [h,m] = timeStr.split(':').map(Number);
+  return h*60 + m;
+}
 
 // ── RECOVERY PAGE (Nachholstoff-Tagebuch) ────────
 // recoveryEntries = { "2026-03-10": [ {id, author, subject, text, attachments, ts}, ... ] }
