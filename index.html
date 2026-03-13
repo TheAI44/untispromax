@@ -652,6 +652,9 @@ let replyingTo = null;
 let addItemFiles = [];
 const SERVER_URL = 'https://untispromax-server-1.onrender.com';
 let notifSettings = JSON.parse(localStorage.getItem('notifSettings') || '{"all":false,"chat":false,"hw24":false}');
+// Timetable cache for fast loading
+let ttCache = JSON.parse(localStorage.getItem('ttCache') || '{}');
+let ttCacheTime = JSON.parse(localStorage.getItem('ttCacheTime') || '{}');
 
 // ── FIRESTORE ────────────────────────────────────
 async function fbGet(id) { const s = await getDoc(doc(db,'appdata',id)); return s.exists() ? s.data().value : null; }
@@ -880,6 +883,22 @@ function initApp() {
   loadNotifSettings();
   if(currentUser.isAdmin){ document.getElementById('adminNotifBtn').style.display='flex'; }
   goTo('home');
+  // Preload timetable in background (no await, just start it)
+  preloadTimetable();
+}
+
+// Preload timetable in background for faster display
+function preloadTimetable() {
+  setTimeout(async ()=>{
+    const cacheKey='week_0';
+    const cachedData=ttCache[cacheKey];
+    const cacheAge=cachedData ? (Date.now()-ttCacheTime[cacheKey])/1000 : null;
+    // Only preload if no cache or cache is older than 30 minutes
+    if(!cachedData || !cacheAge || cacheAge > 1800){
+      ttWeekOffset=0;
+      await fetchTimetableFromServer(2);
+    }
+  }, 2000); // Delay 2s to let home page render first
 }
 
 function updateAvatar() {
@@ -970,34 +989,86 @@ function buildDayTabs() {
 
 async function loadTimetableData() {
   const el=document.getElementById('ttContent');
+  const cacheKey=`week_${ttWeekOffset}`;
+  const cachedData=ttCache[cacheKey];
+  const cacheAge=cachedData ? (Date.now()-ttCacheTime[cacheKey])/1000 : null;
+  
+  // Show cache if available (even if older than 1 hour)
+  if(cachedData){
+    ttData=cachedData;
+    updateWeekHeader();
+    renderDayLessons(selectedDayIdx);
+    // Load fresh data in background if cache is older than 1 hour
+    if(!cacheAge || cacheAge > 3600) refreshTimetableBackground();
+    return;
+  }
+  
+  // No cache - show loading spinner and fetch
   el.innerHTML=`<div class="tt-loading"><div class="spinner"></div><div>Stundenplan wird geladen…</div></div>`;
-  // Retry up to 3x with 2s delay (server may be sleeping on render.com free tier)
-  let lastErr;
-  for(let attempt=0; attempt<3; attempt++){
+  await fetchTimetableFromServer(1);
+}
+
+function updateWeekHeader(){
+  const wl=document.getElementById('ttWeekLabel');
+  const wd=document.getElementById('ttWeekDates');
+  if(ttWeekOffset===0&&wl)wl.textContent='Diese Woche';
+  else if(ttWeekOffset===1&&wl)wl.textContent='Nächste Woche';
+  else if(wl)wl.textContent='Diese Woche';
+  if(wd&&ttData)wd.textContent=`${fmtDate(ttData.week.monday)} – ${fmtDate(ttData.week.friday)}`;
+}
+
+async function fetchTimetableFromServer(maxRetries){
+  const el=document.getElementById('ttContent');
+  const cacheKey=`week_${ttWeekOffset}`;
+  for(let attempt=0; attempt<maxRetries; attempt++){
     try {
-      if(attempt>0){ el.innerHTML=`<div class="tt-loading"><div class="spinner"></div><div>Erneuter Versuch ${attempt+1}/3…</div></div>`; await new Promise(r=>setTimeout(r,2000)); }
-      const res=await fetch(`${SERVER_URL}/timetable?offset=${ttWeekOffset}`,{signal:AbortSignal.timeout(15000)});
+      if(attempt>0){ el.innerHTML=`<div class="tt-loading"><div class="spinner"></div><div>Erneuter Versuch ${attempt+1}/${maxRetries}…</div></div>`; await new Promise(r=>setTimeout(r,1000)); }
+      const res=await fetch(`${SERVER_URL}/timetable?offset=${ttWeekOffset}`,{signal:AbortSignal.timeout(8000)});
       if(!res.ok)throw new Error(`Server Fehler (${res.status})`);
       ttData=await res.json();
-      // Week header
-      const wl=document.getElementById('ttWeekLabel');
-      const wd=document.getElementById('ttWeekDates');
-      if(ttWeekOffset===0&&wl)wl.textContent='Diese Woche';
-      else if(ttWeekOffset===1&&wl)wl.textContent='Nächste Woche';
-      else if(wl)wl.textContent='Diese Woche';
-      // Update nav btn disabled states
-      const navBtns=document.querySelectorAll('.tt-nav-btn');
-      if(navBtns[0])navBtns[0].disabled=ttWeekOffset<=TT_MIN_OFFSET;
-      if(navBtns[2])navBtns[2].disabled=ttWeekOffset>=TT_MAX_OFFSET;
-      if(wd)wd.textContent=`${fmtDate(ttData.week.monday)} – ${fmtDate(ttData.week.friday)}`;
+      // Cache the data
+      ttCache[cacheKey]=ttData;
+      ttCacheTime[cacheKey]=Date.now();
+      localStorage.setItem('ttCache',JSON.stringify(ttCache));
+      localStorage.setItem('ttCacheTime',JSON.stringify(ttCacheTime));
+      updateWeekHeader();
       renderDayLessons(selectedDayIdx);
-      lastErr=null; break; // success
+      updateNavButtons();
+      return;
     } catch(err) {
-      lastErr=err;
+      if(attempt===maxRetries-1){
+        el.innerHTML=`<div class="empty-state"><p style="color:var(--danger)">⚠️ ${err.message}</p><p style="font-size:0.8rem;color:var(--text-muted);margin-top:8px;">Der Server schläft möglicherweise. Bitte warte 30 Sek.</p><button class="btn btn-secondary" style="margin-top:16px;width:auto;padding:10px 20px;" onclick="loadTimetableData()">Erneut versuchen</button></div>`;
+      }
     }
   }
-  if(lastErr){
-    el.innerHTML=`<div class="empty-state"><p style="color:var(--danger)">⚠️ ${lastErr.message}</p><p style="font-size:0.8rem;color:var(--text-muted);margin-top:8px;">Der Server schläft möglicherweise. Bitte warte 30 Sek.</p><button class="btn btn-secondary" style="margin-top:16px;width:auto;padding:10px 20px;" onclick="loadTimetableData()">Erneut versuchen</button></div>`;
+}
+
+function updateNavButtons(){
+  const navBtns=document.querySelectorAll('.tt-nav-btn');
+  if(navBtns[0])navBtns[0].disabled=ttWeekOffset<=TT_MIN_OFFSET;
+  if(navBtns[2])navBtns[2].disabled=ttWeekOffset>=TT_MAX_OFFSET;
+}
+
+// Load fresh timetable in background without blocking UI
+async function refreshTimetableBackground(){
+  const cacheKey=`week_${ttWeekOffset}`;
+  try {
+    const res=await fetch(`${SERVER_URL}/timetable?offset=${ttWeekOffset}`,{signal:AbortSignal.timeout(10000)});
+    if(res.ok){
+      const freshData=await res.json();
+      ttCache[cacheKey]=freshData;
+      ttCacheTime[cacheKey]=Date.now();
+      localStorage.setItem('ttCache',JSON.stringify(ttCache));
+      localStorage.setItem('ttCacheTime',JSON.stringify(ttCacheTime));
+      // Only update if current week still matches
+      if(ttWeekOffset===0){
+        ttData=freshData;
+        renderDayLessons(selectedDayIdx);
+        updateWeekHeader();
+      }
+    }
+  } catch(err) {
+    // Silent fail - cache is already being used
   }
 }
 window.loadTimetableData=loadTimetableData;
