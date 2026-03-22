@@ -1004,6 +1004,67 @@ function initApp() {
   autoLoadMensaPlan();
 }
 
+function waitForTesseract(maxMs) {
+  const start = Date.now();
+  return new Promise(function(resolve) {
+    function tick() {
+      if (window.Tesseract && typeof window.Tesseract.recognize === 'function') {
+        resolve(true);
+        return;
+      }
+      if (Date.now() - start > maxMs) {
+        resolve(false);
+        return;
+      }
+      setTimeout(tick, 300);
+    }
+    tick();
+  });
+}
+
+/** Prefer HLG Mammas Canteen Speiseplan JPG (school page uses wp-content uploads + Speiseplan in filename). */
+function extractSpeiseplanImageUrl(html) {
+  if (!html || typeof html !== 'string') return null;
+  const found = [];
+  const re = /https:\/\/www\.hlg-hamburg\.de\/wp-content\/uploads\/[^\s"'<>]+[Ss]peiseplan[^\s"'<>]*\.(?:jpe?g|png|webp)/gi;
+  let m;
+  while ((m = re.exec(html)) !== null) found.push(m[0]);
+  if (found.length) {
+    const uniq = [...new Set(found)];
+    uniq.sort(function(a, b) { return b.length - a.length; });
+    return uniq[0];
+  }
+  const srcset = html.match(/srcset=["']([^"']*[Ss]peiseplan[^"']*)["']/i);
+  if (srcset && srcset[1]) {
+    const parts = srcset[1].split(',').map(function(s) { return s.trim().split(/\s+/)[0]; }).filter(Boolean);
+    parts.sort(function(a, b) { return b.length - a.length; });
+    if (parts[0]) return parts[0];
+  }
+  return null;
+}
+
+async function fetchUrlAsBlob(url, timeoutMs) {
+  const ms = timeoutMs || 12000;
+  const ctrl = new AbortController();
+  const t = setTimeout(function() { ctrl.abort(); }, ms);
+  try {
+    const direct = await fetch(url, { signal: ctrl.signal, mode: 'cors', credentials: 'omit' });
+    if (direct.ok) return await direct.blob();
+  } catch (e) { /* proxy fallback */ } finally {
+    clearTimeout(t);
+  }
+  const ctrl2 = new AbortController();
+  const t2 = setTimeout(function() { ctrl2.abort(); }, ms + 5000);
+  try {
+    const proxy = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url);
+    const pr = await fetch(proxy, { signal: ctrl2.signal });
+    if (pr.ok) return await pr.blob();
+  } catch (e2) { /* */ } finally {
+    clearTimeout(t2);
+  }
+  return null;
+}
+
 // Auto-load Mensaplan in background (daily)
 function autoLoadMensaPlan() {
   setTimeout(async ()=>{
@@ -1012,16 +1073,13 @@ function autoLoadMensaPlan() {
       today.setHours(0,0,0,0);
       const dateKey = today.toISOString().split('T')[0];
       
-      // Check if already loaded for today
+      // Only skip when we already have meals for this key (empty cache must retry)
       const cached = mensaplan[dateKey];
-      if(cached && cached.validUntil > Date.now()) {
-        console.log('[DEBUG] Mensaplan already loaded for today');
+      if(cached && Array.isArray(cached.meals) && cached.meals.length > 0 && cached.validUntil > Date.now()) {
         return;
       }
       
-      // Try to load from server first (future: backend endpoint)
       try {
-        console.log('[DEBUG] Fetching mensaplan from server...');
         const res = await fetch(`${SERVER_URL}/mensa`, {signal: AbortSignal.timeout(5000)});
         if(res.ok) {
           const data = await res.json();
@@ -1033,96 +1091,54 @@ function autoLoadMensaPlan() {
               loadedAt: new Date().toISOString()
             };
             await fbSet('mensaplan', mensaplan);
-            console.log('[DEBUG] Mensaplan loaded from server:', data.meals.length, 'meals');
             return;
           }
         }
-      } catch(e) {
-        console.log('[DEBUG] Server /mensa not available, trying website fallback');
-      }
+      } catch(e) { /* /mensa optional */ }
       
-      // Fallback: Try to fetch and OCR from website
       await loadMensaFromWebsite(dateKey);
       
-    } catch(err) {
-      console.log('[DEBUG] Mensa autoload failed (non-critical):', err.message);
-    }
+    } catch(err) { /* non-critical background load */ }
   }, 3000);
 }
 
 async function loadMensaFromWebsite(dateKey) {
   try {
-    console.log('[DEBUG] Trying to load mensa from website with OCR...');
-    
-    // Use CORS proxy to fetch website
-    const corsUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent('https://www.hlg-hamburg.de/mammas-canteen/')}`;
-    const proxyRes = await fetch(corsUrl, {signal: AbortSignal.timeout(8000)});
-    
+    const corsUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent('https://www.hlg-hamburg.de/mammas-canteen/');
+    const proxyRes = await fetch(corsUrl, { signal: AbortSignal.timeout(15000) });
     if(!proxyRes.ok) {
-      console.log('[DEBUG] CORS proxy failed');
       return;
     }
-    
     const html = await proxyRes.text();
     
-    // Try to extract image URLs - look for images related to menu/mensa/plan
-    let imgUrl = null;
-    const patterns = [
-      /src=["']([^"']*\.(?:png|jpg|jpeg|gif))[^"']*["'].*?(?:plan|mensa|menu|speise)/i,
-      /src=["']([^"']*(?:plan|mensa|menu|speise)[^"']*\.(?:png|jpg|jpeg|gif))["']/i,
-      /<img[^>]*(?:alt|title)=["'][^"']*(?:plan|mensa|menu)[^"']*["'][^>]*src=["']([^"']+)["']/i,
-      /<img[^>]*src=["']([^"']+)["'][^>]*(?:alt|title)=["'][^"']*(?:plan|mensa|menu)[^"']*["']/i
-    ];
-    
-    for(const pattern of patterns) {
-      const match = html.match(pattern);
-      if(match && match[1]) {
-        imgUrl = match[1];
-        break;
+    let imgUrl = extractSpeiseplanImageUrl(html);
+    if (!imgUrl) {
+      const patterns = [
+        /src=["']([^"']*(?:plan|mensa|menu|speise)[^"']*\.(?:png|jpe?g|gif|webp))["']/i,
+        /<img[^>]*src=["']([^"']+)["'][^>]*(?:alt|title)=["'][^"']*(?:plan|mensa|menu|speise)[^"']*["']/i
+      ];
+      for (const pattern of patterns) {
+        const match = html.match(pattern);
+        if (match && match[1]) { imgUrl = match[1]; break; }
       }
     }
-    
-    // If no specific pattern matched, try to get largest image
     if(!imgUrl) {
-      const imgs = html.match(/<img[^>]+src=["']([^"']+\.(?:png|jpg|jpeg|gif))["']/gi) || [];
-      if(imgs.length > 0) {
-        const lastImg = imgs[imgs.length - 1];
-        const match = lastImg.match(/src=["']([^"']+["'])/);
-        if(match) imgUrl = match[1];
-      }
+      return;
     }
+    if(imgUrl.startsWith('/')) imgUrl = 'https://www.hlg-hamburg.de' + imgUrl;
+    else if(!imgUrl.startsWith('http')) imgUrl = 'https://www.hlg-hamburg.de/' + imgUrl;
     
-    if(!imgUrl) {
-      console.log('[DEBUG] No suitable image found in website');
+    const blob = await fetchUrlAsBlob(imgUrl, 20000);
+    if (!blob) {
       return;
     }
     
-    // Make URL absolute if needed
-    if(imgUrl.startsWith('/')) {
-      imgUrl = 'https://www.hlg-hamburg.de' + imgUrl;
-    } else if(!imgUrl.startsWith('http')) {
-      imgUrl = 'https://www.hlg-hamburg.de/' + imgUrl;
-    }
-    
-    console.log('[DEBUG] Found mensa image:', imgUrl);
-    
-    // Fetch image
-    const imgRes = await fetch(imgUrl, {signal: AbortSignal.timeout(5000)});
-    if(!imgRes.ok) {
-      console.log('[DEBUG] Could not fetch image');
-      return;
-    }
-    const blob = await imgRes.blob();
-    
-    // Use Tesseract if available
-    if(!window.Tesseract) {
-      console.log('[DEBUG] Tesseract not loaded yet');
+    const tessReady = await waitForTesseract(60000);
+    if(!tessReady) {
       return;
     }
     
-    console.log('[DEBUG] Running OCR on mensa image...');
     const { data: { text } } = await Tesseract.recognize(blob, 'deu');
-    console.log('[DEBUG] OCR result (first 300 chars):', text.substring(0, 300));
     
     const meals = parseMensaMeals(text);
     
@@ -1131,18 +1147,24 @@ async function loadMensaFromWebsite(dateKey) {
         meals,
         validUntil: Date.now() + 24*60*60*1000,
         source: 'website-ocr',
-        loadedAt: new Date().toISOString()
+        loadedAt: new Date().toISOString(),
+        sourceImageUrl: imgUrl
       };
       await fbSet('mensaplan', mensaplan);
-      console.log('[DEBUG] ✅ Mensaplan loaded from website OCR:', meals.length, 'meals');
       if(currentPage==='home') renderHome();
     } else {
-      console.log('[DEBUG] ⚠️ OCR parsed no meals from image');
+      mensaplan[dateKey] = {
+        meals: [],
+        validUntil: Date.now() + 6*60*60*1000,
+        source: 'website-image-only',
+        loadedAt: new Date().toISOString(),
+        sourceImageUrl: imgUrl
+      };
+      await fbSet('mensaplan', mensaplan);
+      if(currentPage==='home') renderHome();
     }
     
-  } catch(err) {
-    console.error('[DEBUG] Website OCR failed:', err.message);
-  }
+  } catch(err) { /* optional website scrape */ }
 }
 
 // Preload timetable in background for faster display
@@ -1264,8 +1286,29 @@ function renderHome() {
   if(mensaEl) renderMensaWidget(mensaEl, today);
 }
 
+function pickMensaDayForDisplay(plan, refDate) {
+  const d = new Date(refDate);
+  d.setHours(0, 0, 0, 0);
+  const isoKey = d.toISOString().split('T')[0];
+  const localKey = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  function pick(k) {
+    const x = plan[k];
+    if (!x) return null;
+    if (x.meals && x.meals.length > 0) return x;
+    if (x.sourceImageUrl) return x;
+    return null;
+  }
+  let w = pick(isoKey) || pick(localKey);
+  if (w) return w;
+  const keys = Object.keys(plan).filter(function(k) { return /^\d{4}-\d{2}-\d{2}$/.test(k); }).sort().reverse();
+  for (const k of keys) {
+    w = pick(k);
+    if (w) return w;
+  }
+  return null;
+}
+
 function renderMensaWidget(el, startDate) {
-  // Check if current date is in holidays
   const inHolidays = isHoliday(startDate.toISOString().split('T')[0]);
   
   if(inHolidays) {
@@ -1289,21 +1332,14 @@ function renderMensaWidget(el, startDate) {
     }
   }
   
-  // Find mensaplan for this week
-  const dateKey = startDate.toISOString().split('T')[0];
-  const weekMensa = mensaplan[dateKey];
+  const weekMensa = pickMensaDayForDisplay(mensaplan, startDate);
+  const schoolMensaUrl = 'https://www.hlg-hamburg.de/mammas-canteen/';
   
-  if(!weekMensa || !weekMensa.meals || weekMensa.meals.length === 0) {
-    el.innerHTML = `<div class="empty-state">Mensaplan noch nicht verfügbar 📋</div>`;
-    return;
-  }
-  
-  // Show first meal of the week as preview
-  const meal = weekMensa.meals[0];
-  const vegan = meal.vegan ? '🌱 Vegan' : '';
-  const allergens = meal.allergens ? ` \u00b7 ${meal.allergens}` : '';
-  
-  el.innerHTML = `<div class="card">
+  if(weekMensa && weekMensa.meals && weekMensa.meals.length > 0) {
+    const meal = weekMensa.meals[0];
+    const vegan = meal.vegan ? '🌱 Vegan' : '';
+    const allergens = meal.allergens ? ` \u00b7 ${meal.allergens}` : '';
+    el.innerHTML = `<div class="card">
     <div style="display:flex;gap:12px;align-items:flex-start;">
       <div style="flex:1;">
         <div class="card-title">${meal.name}</div>
@@ -1312,6 +1348,20 @@ function renderMensaWidget(el, startDate) {
       <span class="badge badge-accent">1/${weekMensa.meals.length}</span>
     </div>
   </div>`;
+    return;
+  }
+  
+  if (weekMensa && weekMensa.sourceImageUrl) {
+    const u = weekMensa.sourceImageUrl.replace(/"/g, '&quot;');
+    el.innerHTML = `<div class="card"><a href="${schoolMensaUrl}" target="_blank" rel="noopener" style="text-decoration:none;color:inherit;">
+      <div class="card-title">🍽️ Speiseplan (Bild von Schulwebsite)</div>
+      <div class="card-sub" style="margin-top:8px;">OCR konnte keine Zeilen lesen — Plan hier oder auf der Schulwebsite ansehen.</div>
+      <img src="${u}" alt="Speiseplan" style="width:100%;max-height:280px;object-fit:contain;border-radius:8px;margin-top:10px;background:#0a1f3d;" loading="lazy" referrerpolicy="no-referrer" />
+    </a></div>`;
+    return;
+  }
+  
+  el.innerHTML = `<div class="empty-state">Mensaplan noch nicht verfügbar 📋<br/><a href="${schoolMensaUrl}" target="_blank" rel="noopener" style="color:var(--accent);margin-top:10px;display:inline-block;">Zur Schulwebsite (Mammas Canteen)</a></div>`;
 }
 
 // ── TIMETABLE ─────────────────────────────────────
@@ -1466,7 +1516,6 @@ async function processMensaPlanImage(file) {
   showMsg('📸 Erkenne Mensaplan mit OCR...');
   try {
     const { data: { text } } = await Tesseract.recognize(file, 'deu');
-    console.log('[DEBUG] OCR Text:', text);
     
     // Parse meals from OCR text
     const meals = parseMensaMeals(text);
@@ -1491,36 +1540,28 @@ async function processMensaPlanImage(file) {
     showMsg('✅ Mensaplan erfolgreich hochgeladen! ' + meals.length + ' Gerichte erkannt.', 'success');
     if(currentPage==='home') renderHome();
   } catch(e) {
-    console.error('[DEBUG] OCR Error:', e);
     showMsg('❌ OCR Fehler: ' + e.message);
   }
 }
 window.processMensaPlanImage=processMensaPlanImage;
 
 function parseMensaMeals(text) {
-  // Simple parser: extract lines that look like meal descriptions
-  // Format: "Gericht ... (vegan optional)"
-  const lines = text.split('\n').filter(l => l.trim().length > 3);
+  const lines = text.split(/\r?\n/).filter(function(l) { return l.trim().length > 2; });
   const meals = [];
-  
-  for(const line of lines) {
+  const skipExact = { Montag:1, Dienstag:1, Mittwoch:1, Donnerstag:1, Freitag:1, Samstag:1, Sonntag:1 };
+  for (const line of lines) {
     const trimmed = line.trim();
-    // Skip common headers/footers
-    if(['Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Menü','Mensa','HLG'].some(h => trimmed.includes(h))) continue;
-    
-    const isVegan = trimmed.includes('vegan') || trimmed.includes('Vegan');
+    if (skipExact[trimmed]) continue;
+    if (trimmed.length < 4) continue;
+    const lower = trimmed.toLowerCase();
+    if (/^menü\s*\d*$/i.test(trimmed)) continue;
+    const isVegan = lower.includes('vegan');
     const allergens = trimmed.match(/\([^)]*allergen[^)]*\)/i)?.[0] || '';
-    const name = trimmed.replace(/\(.*\)/g, '').trim();
-    
-    if(name.length > 5) {
-      meals.push({
-        name: name,
-        vegan: isVegan,
-        allergens: allergens
-      });
+    const name = trimmed.replace(/\(.*\)/g, '').replace(/\s+/g, ' ').trim();
+    if (name.length > 2) {
+      meals.push({ name: name, vegan: isVegan, allergens: allergens });
     }
   }
-  
   return meals;
 }
 
