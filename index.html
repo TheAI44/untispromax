@@ -239,6 +239,48 @@
   .chat-file-preview-item img { width: 100%; height: 100%; object-fit: cover; }
   .chat-file-preview-item .file-name { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.7); color: #fff; font-size: 0.6rem; padding: 2px; text-align: center; white-space: nowrap; overflow: hidden; }
   .chat-file-remove { position: absolute; top: 0; right: 0; width: 20px; height: 20px; background: var(--danger); color: #fff; border: none; cursor: pointer; font-size: 0.8rem; padding: 0; display: flex; align-items: center; justify-content: center; }
+  .chat-layout { display: grid; grid-template-columns: 320px 1fr; gap: 12px; height: calc(100vh - 170px); min-height: 560px; }
+  .chat-sidebar { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); display: flex; flex-direction: column; overflow: hidden; }
+  .chat-main { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+  .chat-toolbar { padding: 12px; border-bottom: 1px solid var(--border); display: flex; gap: 8px; align-items: center; }
+  .chat-toolbar .form-input { margin: 0; min-height: 38px; padding: 10px 12px; }
+  .chat-list { overflow-y: auto; padding: 8px; flex: 1; }
+  .chat-list-item { border: 1px solid var(--border); border-radius: 12px; padding: 10px; margin-bottom: 8px; cursor: pointer; background: var(--bg-card2); }
+  .chat-list-item.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent-glow) inset; }
+  .chat-list-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .chat-list-name { font-weight: 700; font-size: 0.86rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .chat-list-last { margin-top: 4px; font-size: 0.76rem; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .chat-unread { min-width: 20px; height: 20px; border-radius: 999px; background: var(--accent2); color: #fff; font-size: 0.7rem; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; padding: 0 6px; }
+  .chat-header { padding: 12px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .chat-header-title { font-weight: 700; font-size: 0.95rem; }
+  .chat-header-sub { font-size: 0.75rem; color: var(--text-muted); margin-top: 2px; }
+  .chat-thread { flex: 1; overflow-y: auto; padding: 14px; background: linear-gradient(180deg, rgba(0,180,255,0.04), transparent 40%); }
+  .msg-row { display: flex; margin-bottom: 10px; }
+  .msg-row.mine { justify-content: flex-end; }
+  .msg-bubble { max-width: min(78%, 680px); background: var(--bg-card2); border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; }
+  .msg-row.mine .msg-bubble { background: rgba(0,180,255,0.12); border-color: rgba(0,180,255,0.35); }
+  .msg-meta { display: flex; align-items: center; justify-content: flex-end; gap: 6px; margin-top: 6px; font-size: 0.68rem; color: var(--text-muted); }
+  .msg-author { font-size: 0.72rem; color: var(--accent); margin-bottom: 4px; font-weight: 700; }
+  .msg-text { white-space: pre-wrap; word-wrap: break-word; font-size: 0.86rem; line-height: 1.45; }
+  .msg-files { margin-top: 8px; display: grid; gap: 8px; }
+  .msg-img { max-width: 100%; max-height: 280px; border-radius: 8px; border: 1px solid var(--border); cursor: pointer; }
+  .msg-file { display: flex; align-items: center; gap: 8px; border: 1px solid var(--border); border-radius: 8px; padding: 8px; background: rgba(0,0,0,0.12); text-decoration: none; color: var(--text-primary); }
+  .msg-file-icon { width: 26px; height: 26px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; background: rgba(0,180,255,0.18); font-size: 0.75rem; font-weight: 700; color: var(--accent); }
+  .msg-rich { border: 1px solid var(--border); border-radius: 8px; padding: 9px; background: rgba(0,180,255,0.06); margin-top: 6px; }
+  .msg-rich-head { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 6px; }
+  .chat-composer { border-top: 1px solid var(--border); padding: 10px; background: var(--bg-card); }
+  .chat-compose-row { display: flex; gap: 8px; align-items: flex-end; }
+  .chat-input { flex: 1; min-height: 42px; max-height: 130px; resize: vertical; }
+  .chat-send-btn { width: auto; padding: 10px 14px; }
+  .chat-attach-preview { margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap; }
+  .chat-attach-chip { display: inline-flex; align-items: center; gap: 6px; background: rgba(0,180,255,0.12); border: 1px solid var(--border); border-radius: 14px; padding: 4px 8px; font-size: 0.72rem; }
+  .chat-empty { height: 100%; display: flex; align-items: center; justify-content: center; color: var(--text-muted); text-align: center; padding: 30px; }
+  .chat-member-chip { display: inline-flex; align-items: center; border: 1px solid var(--border); border-radius: 999px; padding: 6px 10px; margin: 4px 4px 0 0; font-size: 0.75rem; background: var(--bg-card2); }
+  .nav-notif-dot { position: absolute; top: 6px; right: 14px; min-width: 18px; height: 18px; border-radius: 999px; background: var(--danger); color: #fff; display: none; align-items: center; justify-content: center; font-size: 0.62rem; font-weight: 700; padding: 0 5px; }
+  @media (max-width: 980px) {
+    .chat-layout { grid-template-columns: 1fr; height: calc(100vh - 168px); }
+    .chat-sidebar { min-height: 220px; }
+  }
 
   /* KRANKEN PAGE */
   .recovery-header { text-align: center; padding: 20px; margin-bottom: 8px; }
@@ -344,7 +386,6 @@
       <div class="section-block fade-up"><div class="section-title">📚 Nächste Abgaben (7 Tage)</div><div id="homeHwList"></div></div>
       <div class="section-block fade-up"><div class="section-title">📝 Kommende Tests</div><div id="homeTestList"></div></div>
       <div class="section-block fade-up"><div class="section-title">🗓️ Bevorstehende Events</div><div id="homeEventList"></div></div>
-      <div class="section-block fade-up"><div class="section-title">🍽️ Mensaplan diese Woche</div><div id="homeMensaList"></div></div>
     </div>
 
     <!-- TIMETABLE -->
@@ -404,6 +445,22 @@
       <div id="recoveryContent"><div class="empty-state"><p>Wähle einen Tag oben</p></div></div>
       <div id="recoveryFabArea"></div>
     </div>
+
+    <!-- CHAT -->
+    <div class="page" id="chatPage">
+      <div class="chat-layout">
+        <div class="chat-sidebar">
+          <div class="chat-toolbar">
+            <input class="form-input" id="chatSearchInput" placeholder="Chats durchsuchen..." oninput="renderChatList()">
+            <button class="btn btn-secondary" style="width:auto;padding:8px 12px;" onclick="openNewChatModal()">Neu</button>
+          </div>
+          <div class="chat-list" id="chatList"></div>
+        </div>
+        <div class="chat-main">
+          <div id="chatMainRoot" class="chat-empty">Wähle einen Chat aus oder erstelle einen neuen Chat.</div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- BOTTOM NAV (7 items) -->
@@ -431,6 +488,11 @@
     <button class="nav-item" onclick="goTo('recovery')" id="nav-recovery">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
       <span class="nav-label">Krank</span>
+    </button>
+    <button class="nav-item" onclick="goTo('chat')" id="nav-chat">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      <span class="nav-label">Chat</span>
+      <span class="nav-notif-dot" id="navChatBadge">0</span>
     </button>
   </nav>
 </div>
@@ -600,6 +662,9 @@ let addItemFiles = [];
 let timetables = {};
 const SERVER_URL = 'https://untispromax-server-1.onrender.com';
 let notifSettings = JSON.parse(localStorage.getItem('notifSettings') || '{"all":false,"chat":false,"hw24":false}');
+let activeChatId = null;
+let pendingChatFiles = [];
+let pendingRichInsert = null;
 // Timetable cache for fast loading
 let ttCache = JSON.parse(localStorage.getItem('ttCache') || '{}');
 let ttCacheTime = JSON.parse(localStorage.getItem('ttCacheTime') || '{}');
@@ -701,9 +766,6 @@ function expandTeacherName(abbr) {
   return title + ' ' + teacher.fullName;
 }
 
-// Mensaplan: {YYYY-MM-DD: {meals: [{name, allergens, vegan}], validUntil: timestamp}}
-let mensaplan = {};
-
 // ── FIRESTORE ────────────────────────────────────
 async function fbGet(id) { 
   try {
@@ -725,10 +787,10 @@ async function fbSet(id, v) {
 async function loadAllData() {
   try {
     console.log('[DEBUG] Loading all data from Firestore...');
-    const [hw,ev,us,ch,wi,rec,tt,mp] = await Promise.all([fbGet('homework'),fbGet('events'),fbGet('users'),fbGet('chats'),fbGet('wishes'),fbGet('recovery'),fbGet('timetables'),fbGet('mensaplan')]);
+    const [hw,ev,us,ch,wi,rec,tt] = await Promise.all([fbGet('homework'),fbGet('events'),fbGet('users'),fbGet('chats'),fbGet('wishes'),fbGet('recovery'),fbGet('timetables')]);
     homework = hw || getSampleHW(); events = ev || getSampleEvents();
     users = us || {}; chats = ch || {}; wishes = wi || []; recoveryEntries = rec || {};
-    timetables = tt || {}; mensaplan = mp || {};
+    timetables = tt || {};
     if (!hw) await fbSet('homework', homework);
     if (!ev) await fbSet('events', events);
     if (!us) await fbSet('users', users);
@@ -736,7 +798,6 @@ async function loadAllData() {
     if (!wi) await fbSet('wishes', wishes);
     if (!rec) await fbSet('recovery', recoveryEntries);
     if (!tt) await fbSet('timetables', timetables);
-    if (!mp) await fbSet('mensaplan', mensaplan);
     console.log('[DEBUG] All data loaded. Users:', Object.keys(users).length);
   } catch(e) {
     console.error('[DEBUG] Error loading data:', e);
@@ -746,7 +807,7 @@ async function loadAllData() {
 async function saveData() {
   try {
     console.log('[DEBUG] Saving all data...');
-    await Promise.all([fbSet('homework',homework),fbSet('events',events),fbSet('users',users),fbSet('chats',chats),fbSet('wishes',wishes),fbSet('timetables',timetables),fbSet('mensaplan',mensaplan)]);
+    await Promise.all([fbSet('homework',homework),fbSet('events',events),fbSet('users',users),fbSet('chats',chats),fbSet('wishes',wishes),fbSet('timetables',timetables),fbSet('recovery',recoveryEntries)]);
     console.log('[DEBUG] Data saved successfully');
   } catch(e) {
     console.error('[DEBUG] Error saving data:', e);
@@ -759,7 +820,7 @@ function startRealtimeListeners() {
   onSnapshot(doc(db,'appdata','users'), s => { if(s.exists())users=s.data().value||{}; });
   onSnapshot(doc(db,'appdata','recovery'), s => { if(s.exists()){recoveryEntries=s.data().value||{}; if(currentPage==='recovery')renderRecovery();} });
   onSnapshot(doc(db,'appdata','timetables'), s => { if(s.exists()){timetables=s.data().value||{}; if(currentPage==='recovery')renderRecovery();} });
-  onSnapshot(doc(db,'appdata','mensaplan'), s => { if(s.exists()){mensaplan=s.data().value||{}; if(currentPage==='home')renderHome();} });
+  onSnapshot(doc(db,'appdata','chats'), s => { if(s.exists()){chats=s.data().value||{}; if(currentPage==='chat'){renderChatPage();} updateChatUnreadBadge();} });
   onSnapshot(doc(db,'appdata','wishes'), s => {
     if(s.exists()){
       wishes=s.data().value||[];
@@ -903,8 +964,7 @@ async function signupStep3b() {
     const cred=await createUserWithEmailAndPassword(auth,signupTempEmail,signupTempPw);
     console.log('[DEBUG] Signup: User created, uid:', cred.user.uid);
     users[signupTempEmail]={email:signupTempEmail,name,isAdmin:signupIsAdmin,canPost:true,canChat:true,photo:null,id:cred.user.uid,joinedAt:new Date().toISOString()};
-    if(!chats['class'])initClassChat();
-    if(!chats['class'].members.includes(signupTempEmail))chats['class'].members.push(signupTempEmail);
+    ensureChatBootstrap();
     console.log('[DEBUG] Signup: Saving data...');
     await saveData();
     console.log('[DEBUG] Signup: Success!');
@@ -936,10 +996,6 @@ function showStep(n) {
   });
 }
 
-function initClassChat() {
-  chats['class']={id:'class',type:'group',name:'Klassenchat 8a',members:[],messages:[{id:uid(),sender:'system',text:'👋 Willkommen im Klassenchat!',ts:Date.now()}],mutedUsers:[]};
-}
-
 async function loginSuccess(fbUser) {
   try {
     console.log('[DEBUG] Login success for user:', fbUser.email);
@@ -964,15 +1020,14 @@ async function loginSuccess(fbUser) {
         recovered: true
       };
       users[profile.email] = profile;
-      if(!chats['class'])initClassChat();
-      if(!chats['class'].members.includes(profile.email))chats['class'].members.push(profile.email);
+      ensureChatBootstrap();
       await saveData();
       console.log('[DEBUG] Recovery profile created');
     }
 
     currentUser = profile;
-    if(!chats['class'])initClassChat();
-    if(!chats['class'].members.includes(currentUser.email)){chats['class'].members.push(currentUser.email);await saveData();}
+    ensureChatBootstrap();
+    await saveData();
     document.getElementById('authScreen').classList.add('hidden');
     document.getElementById('appScreen').classList.remove('hidden');
     console.log('[DEBUG] App initialized for user:', currentUser.email);
@@ -1000,171 +1055,7 @@ function initApp() {
   goTo('home');
   // Preload timetable in background (no await, just start it)
   preloadTimetable();
-  // Auto-load mensa plan in background
-  autoLoadMensaPlan();
-}
-
-function waitForTesseract(maxMs) {
-  const start = Date.now();
-  return new Promise(function(resolve) {
-    function tick() {
-      if (window.Tesseract && typeof window.Tesseract.recognize === 'function') {
-        resolve(true);
-        return;
-      }
-      if (Date.now() - start > maxMs) {
-        resolve(false);
-        return;
-      }
-      setTimeout(tick, 300);
-    }
-    tick();
-  });
-}
-
-/** Prefer HLG Mammas Canteen Speiseplan JPG (school page uses wp-content uploads + Speiseplan in filename). */
-function extractSpeiseplanImageUrl(html) {
-  if (!html || typeof html !== 'string') return null;
-  const found = [];
-  const re = /https:\/\/www\.hlg-hamburg\.de\/wp-content\/uploads\/[^\s"'<>]+[Ss]peiseplan[^\s"'<>]*\.(?:jpe?g|png|webp)/gi;
-  let m;
-  while ((m = re.exec(html)) !== null) found.push(m[0]);
-  if (found.length) {
-    const uniq = [...new Set(found)];
-    uniq.sort(function(a, b) { return b.length - a.length; });
-    return uniq[0];
-  }
-  const srcset = html.match(/srcset=["']([^"']*[Ss]peiseplan[^"']*)["']/i);
-  if (srcset && srcset[1]) {
-    const parts = srcset[1].split(',').map(function(s) { return s.trim().split(/\s+/)[0]; }).filter(Boolean);
-    parts.sort(function(a, b) { return b.length - a.length; });
-    if (parts[0]) return parts[0];
-  }
-  return null;
-}
-
-async function fetchUrlAsBlob(url, timeoutMs) {
-  const ms = timeoutMs || 12000;
-  const ctrl = new AbortController();
-  const t = setTimeout(function() { ctrl.abort(); }, ms);
-  try {
-    const direct = await fetch(url, { signal: ctrl.signal, mode: 'cors', credentials: 'omit' });
-    if (direct.ok) return await direct.blob();
-  } catch (e) { /* proxy fallback */ } finally {
-    clearTimeout(t);
-  }
-  const ctrl2 = new AbortController();
-  const t2 = setTimeout(function() { ctrl2.abort(); }, ms + 5000);
-  try {
-    const proxy = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url);
-    const pr = await fetch(proxy, { signal: ctrl2.signal });
-    if (pr.ok) return await pr.blob();
-  } catch (e2) { /* */ } finally {
-    clearTimeout(t2);
-  }
-  return null;
-}
-
-// Auto-load Mensaplan in background (daily)
-function autoLoadMensaPlan() {
-  setTimeout(async ()=>{
-    try {
-      const today = new Date();
-      today.setHours(0,0,0,0);
-      const dateKey = today.toISOString().split('T')[0];
-      
-      // Only skip when we already have meals for this key (empty cache must retry)
-      const cached = mensaplan[dateKey];
-      if(cached && Array.isArray(cached.meals) && cached.meals.length > 0 && cached.validUntil > Date.now()) {
-        return;
-      }
-      
-      try {
-        const res = await fetch(`${SERVER_URL}/mensa`, {signal: AbortSignal.timeout(5000)});
-        if(res.ok) {
-          const data = await res.json();
-          if(data.meals && Array.isArray(data.meals)) {
-            mensaplan[dateKey] = {
-              meals: data.meals,
-              validUntil: Date.now() + 24*60*60*1000,
-              source: 'server',
-              loadedAt: new Date().toISOString()
-            };
-            await fbSet('mensaplan', mensaplan);
-            return;
-          }
-        }
-      } catch(e) { /* /mensa optional */ }
-      
-      await loadMensaFromWebsite(dateKey);
-      
-    } catch(err) { /* non-critical background load */ }
-  }, 3000);
-}
-
-async function loadMensaFromWebsite(dateKey) {
-  try {
-    const corsUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent('https://www.hlg-hamburg.de/mammas-canteen/');
-    const proxyRes = await fetch(corsUrl, { signal: AbortSignal.timeout(15000) });
-    if(!proxyRes.ok) {
-      return;
-    }
-    const html = await proxyRes.text();
-    
-    let imgUrl = extractSpeiseplanImageUrl(html);
-    if (!imgUrl) {
-      const patterns = [
-        /src=["']([^"']*(?:plan|mensa|menu|speise)[^"']*\.(?:png|jpe?g|gif|webp))["']/i,
-        /<img[^>]*src=["']([^"']+)["'][^>]*(?:alt|title)=["'][^"']*(?:plan|mensa|menu|speise)[^"']*["']/i
-      ];
-      for (const pattern of patterns) {
-        const match = html.match(pattern);
-        if (match && match[1]) { imgUrl = match[1]; break; }
-      }
-    }
-    if(!imgUrl) {
-      return;
-    }
-    if(imgUrl.startsWith('/')) imgUrl = 'https://www.hlg-hamburg.de' + imgUrl;
-    else if(!imgUrl.startsWith('http')) imgUrl = 'https://www.hlg-hamburg.de/' + imgUrl;
-    
-    const blob = await fetchUrlAsBlob(imgUrl, 20000);
-    if (!blob) {
-      return;
-    }
-    
-    const tessReady = await waitForTesseract(60000);
-    if(!tessReady) {
-      return;
-    }
-    
-    const { data: { text } } = await Tesseract.recognize(blob, 'deu');
-    
-    const meals = parseMensaMeals(text);
-    
-    if(meals.length > 0) {
-      mensaplan[dateKey] = {
-        meals,
-        validUntil: Date.now() + 24*60*60*1000,
-        source: 'website-ocr',
-        loadedAt: new Date().toISOString(),
-        sourceImageUrl: imgUrl
-      };
-      await fbSet('mensaplan', mensaplan);
-      if(currentPage==='home') renderHome();
-    } else {
-      mensaplan[dateKey] = {
-        meals: [],
-        validUntil: Date.now() + 6*60*60*1000,
-        source: 'website-image-only',
-        loadedAt: new Date().toISOString(),
-        sourceImageUrl: imgUrl
-      };
-      await fbSet('mensaplan', mensaplan);
-      if(currentPage==='home') renderHome();
-    }
-    
-  } catch(err) { /* optional website scrape */ }
+  updateChatUnreadBadge();
 }
 
 // Preload timetable in background for faster display
@@ -1252,6 +1143,7 @@ function goTo(page) {
   if(page==='tests'){renderTests();if(canEdit())document.getElementById('fabBtn').style.display='flex';}
   if(page==='events'){renderEvents();if(canEdit())document.getElementById('fabBtn').style.display='flex';}
   if(page==='recovery')renderRecovery();
+  if(page==='chat')renderChatPage();
 }
 window.goTo=goTo;
 
@@ -1280,88 +1172,6 @@ function renderHome() {
   const evEl=document.getElementById('homeEventList');
   if(evEl)evEl.innerHTML=evts.length===0?`<div class="empty-state">Keine Ereignisse diese Woche</div>`:
     evts.map(e=>`<div class="card event" onclick="goTo('events')"><div class="card-row"><div><div class="card-title">${e.title}</div><div class="card-sub">${new Date(e.date).toLocaleDateString('de-DE')}</div></div><span class="badge badge-success">Bald</span></div></div>`).join('');
-  
-  // Render Mensaplan
-  const mensaEl=document.getElementById('homeMensaList');
-  if(mensaEl) renderMensaWidget(mensaEl, today);
-}
-
-function pickMensaDayForDisplay(plan, refDate) {
-  const d = new Date(refDate);
-  d.setHours(0, 0, 0, 0);
-  const isoKey = d.toISOString().split('T')[0];
-  const localKey = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-  function pick(k) {
-    const x = plan[k];
-    if (!x) return null;
-    if (x.meals && x.meals.length > 0) return x;
-    if (x.sourceImageUrl) return x;
-    return null;
-  }
-  let w = pick(isoKey) || pick(localKey);
-  if (w) return w;
-  const keys = Object.keys(plan).filter(function(k) { return /^\d{4}-\d{2}-\d{2}$/.test(k); }).sort().reverse();
-  for (const k of keys) {
-    w = pick(k);
-    if (w) return w;
-  }
-  return null;
-}
-
-function renderMensaWidget(el, startDate) {
-  const inHolidays = isHoliday(startDate.toISOString().split('T')[0]);
-  
-  if(inHolidays) {
-    const holiday = events.find(e => {
-      if(!e.title.includes('Ferien') && !e.title.includes('Schulfrei')) return false;
-      const start = new Date(e.date);
-      const end = e.dateEnd ? new Date(e.dateEnd) : start;
-      return startDate >= start && startDate <= end;
-    });
-    if(holiday) {
-      el.innerHTML = `<div class="card holiday">
-        <div class="card-row">
-          <div>
-            <div class="card-title">🏖️ ${holiday.title}</div>
-            <div class="card-sub">Keine Mensa diese Woche</div>
-          </div>
-          <span class="badge badge-success">Schulfrei</span>
-        </div>
-      </div>`;
-      return;
-    }
-  }
-  
-  const weekMensa = pickMensaDayForDisplay(mensaplan, startDate);
-  const schoolMensaUrl = 'https://www.hlg-hamburg.de/mammas-canteen/';
-  
-  if(weekMensa && weekMensa.meals && weekMensa.meals.length > 0) {
-    const meal = weekMensa.meals[0];
-    const vegan = meal.vegan ? '🌱 Vegan' : '';
-    const allergens = meal.allergens ? ` \u00b7 ${meal.allergens}` : '';
-    el.innerHTML = `<div class="card">
-    <div style="display:flex;gap:12px;align-items:flex-start;">
-      <div style="flex:1;">
-        <div class="card-title">${meal.name}</div>
-        <div class="card-sub" style="margin-top:6px;font-size:0.75rem;color:var(--text-muted);">${vegan}${allergens}</div>
-      </div>
-      <span class="badge badge-accent">1/${weekMensa.meals.length}</span>
-    </div>
-  </div>`;
-    return;
-  }
-  
-  if (weekMensa && weekMensa.sourceImageUrl) {
-    const u = weekMensa.sourceImageUrl.replace(/"/g, '&quot;');
-    el.innerHTML = `<div class="card"><a href="${schoolMensaUrl}" target="_blank" rel="noopener" style="text-decoration:none;color:inherit;">
-      <div class="card-title">🍽️ Speiseplan (Bild von Schulwebsite)</div>
-      <div class="card-sub" style="margin-top:8px;">OCR konnte keine Zeilen lesen — Plan hier oder auf der Schulwebsite ansehen.</div>
-      <img src="${u}" alt="Speiseplan" style="width:100%;max-height:280px;object-fit:contain;border-radius:8px;margin-top:10px;background:#0a1f3d;" loading="lazy" referrerpolicy="no-referrer" />
-    </a></div>`;
-    return;
-  }
-  
-  el.innerHTML = `<div class="empty-state">Mensaplan noch nicht verfügbar 📋<br/><a href="${schoolMensaUrl}" target="_blank" rel="noopener" style="color:var(--accent);margin-top:10px;display:inline-block;">Zur Schulwebsite (Mammas Canteen)</a></div>`;
 }
 
 // ── TIMETABLE ─────────────────────────────────────
@@ -1505,110 +1315,6 @@ function selectDay(idx) {
   renderDayLessons(idx);
 }
 window.selectDay=selectDay;
-
-// ── MENSAPLAN (Mensa-Verwaltung) ───────────────
-async function processMensaPlanImage(file) {
-  if(!window.Tesseract) {
-    showMsg('❌ OCR-Bibliothek wird geladen... Bitte versuchen Sie es gleich nochmal.');
-    return;
-  }
-  
-  showMsg('📸 Erkenne Mensaplan mit OCR...');
-  try {
-    const { data: { text } } = await Tesseract.recognize(file, 'deu');
-    
-    // Parse meals from OCR text
-    const meals = parseMensaMeals(text);
-    if(meals.length === 0) {
-      showMsg('❌ Keine Mahlzeiten erkannt. Bitte versuchen Sie ein besseres Foto.');
-      return;
-    }
-    
-    // Save to mensaplan
-    const today = new Date();
-    today.setHours(0,0,0,0);
-    const dateKey = today.toISOString().split('T')[0];
-    
-    mensaplan[dateKey] = {
-      meals: meals,
-      validUntil: Date.now() + 7*24*60*60*1000, // 1 week valid
-      uploadedBy: currentUser.email,
-      uploadedAt: new Date().toISOString()
-    };
-    
-    await fbSet('mensaplan', mensaplan);
-    showMsg('✅ Mensaplan erfolgreich hochgeladen! ' + meals.length + ' Gerichte erkannt.', 'success');
-    if(currentPage==='home') renderHome();
-  } catch(e) {
-    showMsg('❌ OCR Fehler: ' + e.message);
-  }
-}
-window.processMensaPlanImage=processMensaPlanImage;
-
-function parseMensaMeals(text) {
-  const lines = text.split(/\r?\n/).filter(function(l) { return l.trim().length > 2; });
-  const meals = [];
-  const skipExact = { Montag:1, Dienstag:1, Mittwoch:1, Donnerstag:1, Freitag:1, Samstag:1, Sonntag:1 };
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (skipExact[trimmed]) continue;
-    if (trimmed.length < 4) continue;
-    const lower = trimmed.toLowerCase();
-    if (/^menü\s*\d*$/i.test(trimmed)) continue;
-    const isVegan = lower.includes('vegan');
-    const allergens = trimmed.match(/\([^)]*allergen[^)]*\)/i)?.[0] || '';
-    const name = trimmed.replace(/\(.*\)/g, '').replace(/\s+/g, ' ').trim();
-    if (name.length > 2) {
-      meals.push({ name: name, vegan: isVegan, allergens: allergens });
-    }
-  }
-  return meals;
-}
-
-// Accept manual mensa entry (admin only)
-async function uploadMensaPlanManual(mealsText) {
-  if(!currentUser?.isAdmin) return showMsg('❌ Nur Admins können Mensapläne bearbeiten.');
-  
-  try {
-    const lines = mealsText.split('\n').filter(l => l.trim());
-    const meals = lines.map(line => {
-      const isVegan = line.includes('🌱');
-      const name = line.replace('🌱', '').trim();
-      return { name, vegan: isVegan, allergens: '' };
-    });
-    
-    const today = new Date();
-    today.setHours(0,0,0,0);
-    const dateKey = today.toISOString().split('T')[0];
-    
-    mensaplan[dateKey] = {
-      meals,
-      validUntil: Date.now() + 7*24*60*60*1000,
-      uploadedBy: currentUser.email,
-      uploadedAt: new Date().toISOString()
-    };
-    
-    await fbSet('mensaplan', mensaplan);
-    showMsg('✅ Mensaplan gespeichert! ' + meals.length + ' Gerichte.', 'success');
-    if(currentPage==='home') renderHome();
-  } catch(e) {
-    console.error('[DEBUG] Manual upload error:', e);
-    showMsg('❌ Fehler: ' + e.message);
-  }
-}
-window.uploadMensaPlanManual=uploadMensaPlanManual;
-
-async function handleMensaImageUpload(event) {
-  const file = event.target.files?.[0];
-  if(!file) return;
-  if(!currentUser?.isAdmin) return showMsg('❌ Nur Admins können Mensapläne bearbeiten.');
-  
-  showMsg('⏳ Verarbeite Bild mit OCR...');
-  await processMensaPlanImage(file);
-  // Reset input
-  document.getElementById('mensaPlanImageInput').value = '';
-}
-window.handleMensaImageUpload=handleMensaImageUpload;
 
 function renderDayLessons(idx) {
   const lessons=ttData?.days?.[idx]||[];
@@ -2211,6 +1917,323 @@ function updateWishBadge(){
   if(badge){badge.style.display=unread>0?'flex':'none';badge.textContent=unread;}
 }
 
+// ── CHAT ──────────────────────────────────────────
+function ensureChatBootstrap() {
+  if(!currentUser?.email) return;
+  if(!chats || typeof chats!=='object' || Array.isArray(chats)) chats = {};
+  const klassId = 'class-8a';
+  if(!chats[klassId]){
+    chats[klassId] = {
+      id: klassId,
+      type: 'group',
+      name: 'Klassenchat 8a',
+      members: [currentUser.email],
+      admins: currentUser.isAdmin ? [currentUser.email] : [],
+      createdBy: currentUser.email,
+      createdAt: Date.now(),
+      messages: [{ id: uid(), senderEmail: 'system', senderName: 'System', type: 'text', text: 'Willkommen im Klassenchat 👋', ts: Date.now(), reads: {} }]
+    };
+  }
+  Object.values(users||{}).forEach(u=>{
+    if(!u?.email) return;
+    if(!chats[klassId].members.includes(u.email)) chats[klassId].members.push(u.email);
+  });
+}
+
+function getVisibleMessages(chat){
+  return (chat.messages||[]).filter(m => !m.deletedForEveryone && !(m.deletedFor||[]).includes(currentUser.email));
+}
+
+function getUnreadCount(chat){
+  if(!chat || !chat.messages) return 0;
+  return chat.messages.filter(m =>
+    m.senderEmail !== currentUser.email &&
+    !m.deletedForEveryone &&
+    !(m.deletedFor||[]).includes(currentUser.email) &&
+    !(m.reads && m.reads[currentUser.email])
+  ).length;
+}
+
+function updateChatUnreadBadge(){
+  const total = Object.values(chats||{}).reduce((sum,c)=>sum+getUnreadCount(c),0);
+  const badge = document.getElementById('navChatBadge');
+  if(!badge) return;
+  badge.style.display = total>0?'inline-flex':'none';
+  badge.textContent = total>99?'99+':String(total);
+}
+
+function openNewChatModal(){
+  const list = document.getElementById('newChatUserList');
+  const people = Object.values(users||{}).filter(u=>u.email!==currentUser.email);
+  list.innerHTML = people.length?people.map(u=>`<div class="admin-user-row"><span class="admin-user-name">${u.name}</span><button class="btn btn-secondary" style="width:auto;padding:6px 10px;" onclick="startDirectChat('${u.email}')">Starten</button></div>`).join(''):'<div class="empty-state">Keine weiteren Nutzer gefunden.</div>';
+  openModal('newChatOverlay');
+}
+window.openNewChatModal=openNewChatModal;
+
+function dmChatId(a,b){ return ['dm',a,b].sort().join(':'); }
+
+async function startDirectChat(otherEmail){
+  if(!otherEmail || otherEmail===currentUser.email) return;
+  const id = dmChatId(currentUser.email, otherEmail);
+  if(!chats[id]){
+    const other = users[otherEmail];
+    chats[id] = {
+      id, type:'dm', name:other?.name || otherEmail, members:[currentUser.email,otherEmail], admins:[currentUser.email],
+      createdBy:currentUser.email, createdAt:Date.now(), messages:[]
+    };
+    await saveData();
+  }
+  closeModal('newChatOverlay');
+  goTo('chat');
+  openChat(id);
+}
+window.startDirectChat=startDirectChat;
+
+function openNewGroupModal(){
+  const el=document.getElementById('groupMemberList');
+  const people=Object.values(users||{}).filter(u=>u.email!==currentUser.email);
+  el.innerHTML=people.map(u=>`<div class="admin-user-row"><span class="admin-user-name">${u.name}</span><label class="toggle"><input type="checkbox" class="group-member-check" value="${u.email}"><span class="toggle-slider"></span></label></div>`).join('');
+  document.getElementById('groupName').value='';
+  openModal('newGroupOverlay');
+}
+window.openNewGroupModal=openNewGroupModal;
+
+async function createGroup(){
+  const name=document.getElementById('groupName').value.trim();
+  if(!name) return alert('Gruppenname fehlt.');
+  const checked=[...document.querySelectorAll('.group-member-check:checked')].map(x=>x.value);
+  const members=[currentUser.email, ...checked];
+  const id='grp:'+uid();
+  chats[id]={id,type:'group',name,members,admins:[currentUser.email],createdBy:currentUser.email,createdAt:Date.now(),messages:[]};
+  await saveData();
+  closeModal('newGroupOverlay');
+  goTo('chat');
+  openChat(id);
+}
+window.createGroup=createGroup;
+
+function renderChatList(){
+  ensureChatBootstrap();
+  const q=(document.getElementById('chatSearchInput')?.value||'').toLowerCase().trim();
+  const list=document.getElementById('chatList');
+  if(!list) return;
+  const rows=Object.values(chats||{}).filter(c=>c.members?.includes(currentUser.email)).sort((a,b)=>{
+    const ta=(a.messages?.[a.messages.length-1]?.ts)||a.createdAt||0;
+    const tb=(b.messages?.[b.messages.length-1]?.ts)||b.createdAt||0;
+    return tb-ta;
+  }).filter(c=>{
+    if(!q) return true;
+    const last=(c.messages?.[c.messages.length-1]?.text||'').toLowerCase();
+    return (c.name||'').toLowerCase().includes(q) || last.includes(q);
+  });
+  list.innerHTML = rows.length?rows.map(c=>{
+    const unread=getUnreadCount(c);
+    const last=(getVisibleMessages(c).slice(-1)[0]||{});
+    const lastText=last.rich?`🔹 ${last.rich.title||'Eintrag'}`:(last.text||'Noch keine Nachrichten');
+    const time=last.ts?new Date(last.ts).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}):'';
+    return `<div class="chat-list-item ${activeChatId===c.id?'active':''}" onclick="openChat('${c.id}')">
+      <div class="chat-list-row"><div class="chat-list-name">${c.name}</div><div style="font-size:0.68rem;color:var(--text-muted)">${time}</div></div>
+      <div class="chat-list-row"><div class="chat-list-last">${lastText}</div>${unread?`<span class="chat-unread">${unread}</span>`:''}</div>
+    </div>`;
+  }).join(''):'<div class="chat-empty">Keine Chats vorhanden.</div>';
+}
+window.renderChatList=renderChatList;
+
+function buildSiteDataItems(){
+  const items=[];
+  Object.values(timetables||{}).forEach(week=>{
+    (week.days||[]).forEach((day,dayIdx)=>{
+      (day||[]).forEach((l,idx)=>{
+        items.push({section:'Stundenplan',title:`${['Mo','Di','Mi','Do','Fr'][dayIdx]||'Tag'} · ${l.time} · ${l.subject}`,body:`${expandTeacherName(l.teacher)} · ${l.room}${l.note?' · '+l.note:''}`,payload:l});
+      });
+    });
+  });
+  (events||[]).forEach(e=>items.push({section:'Events',title:e.title||'Event',body:`${new Date(e.date).toLocaleDateString('de-DE')} ${e.desc||''}`.trim(),payload:e}));
+  (homework||[]).forEach(h=>items.push({section:h.type==='Hausaufgabe'?'Hausaufgaben':'Tests',title:`${h.subject} (${h.type})`,body:`${h.desc} · ${new Date(h.date).toLocaleDateString('de-DE')}`,payload:h}));
+  Object.entries(recoveryEntries||{}).forEach(([d,list])=> (list||[]).forEach(r=>items.push({section:'Krank',title:`${r.subject||'Allgemein'} · ${new Date(d).toLocaleDateString('de-DE')}`,body:r.text,payload:r})));
+  (wishes||[]).forEach(w=>items.push({section:'Wünsche',title:w.from||'Unbekannt',body:w.text,payload:w}));
+  return items;
+}
+
+function openDataPicker(){
+  const items=buildSiteDataItems();
+  window.__chatPickerItems = items;
+  const grouped={};
+  items.forEach((i,idx)=>{(grouped[i.section]=grouped[i.section]||[]).push({...i,_idx:idx});});
+  const html=Object.keys(grouped).sort().map(sec=>`<div class="section-title">${sec}</div>${grouped[sec].map(i=>`<div class="card" style="cursor:pointer" onclick="selectRichItemByIndex(${i._idx})"><div class="card-title">${i.title}</div><div class="card-sub">${i.body||''}</div></div>`).join('')}`).join('');
+  document.getElementById('itemDetailContent').innerHTML=`<div class="modal-title">📎 Daten aus Website einfügen</div>${html||'<div class="empty-state">Keine Daten verfügbar.</div>'}`;
+  openModal('itemDetailOverlay');
+}
+window.openDataPicker=openDataPicker;
+
+function selectRichItemByIndex(idx){
+  pendingRichInsert=(window.__chatPickerItems||[])[idx]||null;
+  closeModal('itemDetailOverlay');
+  renderComposerPreview();
+}
+window.selectRichItemByIndex=selectRichItemByIndex;
+
+function renderComposerPreview(){
+  const el=document.getElementById('chatAttachPreview');
+  if(!el) return;
+  const rich = pendingRichInsert ? `<span class="chat-attach-chip">🔹 ${pendingRichInsert.section}: ${pendingRichInsert.title} <button class="chat-file-remove" style="position:static;width:16px;height:16px;border-radius:50%;" onclick="clearPendingRich()">×</button></span>` : '';
+  const files = pendingChatFiles.map((f,i)=>`<span class="chat-attach-chip">${f.type?.startsWith('image/')?'🖼️':'📎'} ${f.name}<button class="chat-file-remove" style="position:static;width:16px;height:16px;border-radius:50%;" onclick="removePendingChatFile(${i})">×</button></span>`).join('');
+  el.innerHTML = rich + files;
+}
+window.renderComposerPreview=renderComposerPreview;
+function clearPendingRich(){ pendingRichInsert=null; renderComposerPreview(); } window.clearPendingRich=clearPendingRich;
+function removePendingChatFile(i){ pendingChatFiles.splice(i,1); renderComposerPreview(); } window.removePendingChatFile=removePendingChatFile;
+
+function fileIconByName(name){
+  const ext=(name.split('.').pop()||'').toLowerCase();
+  if(['pdf'].includes(ext)) return 'PDF';
+  if(['doc','docx'].includes(ext)) return 'DOC';
+  if(['xls','xlsx'].includes(ext)) return 'XLS';
+  if(['ppt','pptx'].includes(ext)) return 'PPT';
+  if(['zip','rar','7z'].includes(ext)) return 'ZIP';
+  return 'FILE';
+}
+
+async function handleChatFilePick(e){
+  const files=[...e.target.files||[]];
+  for(const file of files){
+    const reader=new FileReader();
+    const data=await new Promise(res=>{ reader.onload=ev=>res(ev.target.result); reader.readAsDataURL(file); });
+    pendingChatFiles.push({name:file.name,type:file.type,data});
+  }
+  e.target.value='';
+  renderComposerPreview();
+}
+window.handleChatFilePick=handleChatFilePick;
+
+function formatMsgTime(ts){ return new Date(ts).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}); }
+
+async function openChat(chatId){
+  activeChatId=chatId;
+  renderChatList();
+  const c=chats[chatId]; if(!c) return;
+  (c.messages||[]).forEach(m=>{ if(!m.reads) m.reads={}; if(m.senderEmail!==currentUser.email && !m.reads[currentUser.email]) m.reads[currentUser.email]=Date.now(); });
+  await saveData();
+  renderChatThread();
+  updateChatUnreadBadge();
+}
+window.openChat=openChat;
+
+function renderChatThread(){
+  const root=document.getElementById('chatMainRoot'); if(!root) return;
+  const c=chats[activeChatId];
+  if(!c){ root.className='chat-empty'; root.textContent='Wähle einen Chat aus.'; return; }
+  root.className='';
+  root.innerHTML = `<div class="chat-header"><div><div class="chat-header-title">${c.name}</div><div class="chat-header-sub">${c.members.length} Mitglieder</div></div><div style="display:flex;gap:6px;"><button class="btn btn-secondary" style="width:auto;padding:7px 10px;" onclick="openGroupManage()">Verwalten</button></div></div>
+    <div class="chat-thread" id="chatThread"></div>
+    <div class="chat-composer">
+      <div class="chat-compose-row">
+        <button class="btn btn-secondary" style="width:auto;padding:8px 10px;" onclick="document.getElementById('chatFileInput').click()">📎</button>
+        <button class="btn btn-secondary" style="width:auto;padding:8px 10px;" onclick="openDataPicker()">Daten</button>
+        <textarea id="chatInput" class="form-input chat-input" placeholder="Nachricht schreiben..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChatMessage();}"></textarea>
+        <button class="btn btn-primary chat-send-btn" onclick="sendChatMessage()">Senden</button>
+      </div>
+      <input type="file" id="chatFileInput" multiple style="display:none;" onchange="handleChatFilePick(event)">
+      <div id="chatAttachPreview" class="chat-attach-preview"></div>
+    </div>`;
+  renderComposerPreview();
+  const thread=document.getElementById('chatThread');
+  const msgs=getVisibleMessages(c);
+  thread.innerHTML = msgs.length?msgs.map(m=>{
+    const mine=m.senderEmail===currentUser.email;
+    const reads = mine ? Object.keys(m.reads||{}).filter(e=>e!==currentUser.email).length : 0;
+    const files = (m.files||[]).map(f=> f.type?.startsWith('image/') ? `<img class="msg-img" src="${f.data}" onclick="openImageLightbox('${f.data}')">` : `<a class="msg-file" href="${f.data}" download="${f.name}"><span class="msg-file-icon">${fileIconByName(f.name)}</span><span>${f.name}</span></a>`).join('');
+    const rich = m.rich?`<div class="msg-rich"><div class="msg-rich-head">${m.rich.section}</div><div class="card-title">${m.rich.title}</div><div class="card-sub">${m.rich.body||''}</div></div>`:'';
+    const delBtn = mine || c.admins?.includes(currentUser.email) ? `<button class="btn btn-secondary" style="width:auto;padding:4px 8px;font-size:0.68rem;" onclick="deleteMessageFlow('${c.id}','${m.id}')">Löschen</button>`:'';
+    return `<div class="msg-row ${mine?'mine':''}"><div class="msg-bubble">${mine?'':`<div class="msg-author">${m.senderName||m.senderEmail}</div>`}<div class="msg-text">${m.text||''}</div>${rich}${files?`<div class="msg-files">${files}</div>`:''}<div class="msg-meta">${delBtn}<span>${formatMsgTime(m.ts)}</span>${mine?`<span>${reads>0?'✓✓':'✓'}</span>`:''}</div></div></div>`;
+  }).join(''):'<div class="chat-empty">Noch keine Nachrichten.</div>';
+  thread.scrollTop=thread.scrollHeight;
+}
+window.renderChatThread=renderChatThread;
+
+function openImageLightbox(src){ document.getElementById('itemDetailContent').innerHTML=`<img src="${src}" style="width:100%;border-radius:10px;">`; openModal('itemDetailOverlay'); }
+window.openImageLightbox=openImageLightbox;
+
+async function sendChatMessage(){
+  const c=chats[activeChatId]; if(!c) return;
+  const input=document.getElementById('chatInput');
+  const text=input.value.trim();
+  if(!text && !pendingChatFiles.length && !pendingRichInsert) return;
+  const msg={id:uid(),senderEmail:currentUser.email,senderName:currentUser.name,type:'text',text,files:pendingChatFiles,rich:pendingRichInsert,ts:Date.now(),reads:{[currentUser.email]:Date.now()},deletedFor:[]};
+  c.messages=c.messages||[];
+  c.messages.push(msg);
+  c.updatedAt=Date.now();
+  input.value='';
+  pendingChatFiles=[]; pendingRichInsert=null;
+  renderComposerPreview();
+  await saveData();
+  renderChatThread();
+  renderChatList();
+  updateChatUnreadBadge();
+}
+window.sendChatMessage=sendChatMessage;
+
+async function deleteMessageFlow(chatId,msgId){
+  const c=chats[chatId]; if(!c) return;
+  const m=(c.messages||[]).find(x=>x.id===msgId); if(!m) return;
+  const canAll = m.senderEmail===currentUser.email || (c.admins||[]).includes(currentUser.email);
+  const choice = prompt(canAll?'Löschen: "me" oder "all"':'Löschen: "me"','me');
+  if(!choice) return;
+  if(choice==='all' && canAll){ m.deletedForEveryone=true; }
+  else { m.deletedFor = [...new Set([...(m.deletedFor||[]), currentUser.email])]; }
+  await saveData();
+  renderChatThread();
+  renderChatList();
+  updateChatUnreadBadge();
+}
+window.deleteMessageFlow=deleteMessageFlow;
+
+function openGroupManage(){
+  const c=chats[activeChatId]; if(!c || c.type!=='group') return;
+  if(!(c.admins||[]).includes(currentUser.email)) return alert('Nur Admins können Gruppen verwalten.');
+  const members=(c.members||[]).map(e=>users[e]?.name||e);
+  const html=`<div class="modal-title">Gruppe verwalten</div>
+    <div class="form-group"><label class="form-label">Name</label><input id="grpNameEdit" class="form-input" value="${c.name||''}"></div>
+    <div class="form-group"><label class="form-label">Mitglieder</label>${(c.members||[]).map(e=>`<span class="chat-member-chip">${users[e]?.name||e} <button style="margin-left:6px;border:none;background:transparent;color:var(--danger);cursor:pointer;" onclick="removeGroupMember('${e}')">×</button></span>`).join('')}</div>
+    <div class="form-group"><label class="form-label">Mitglied hinzufügen (E-Mail)</label><input id="grpAddMember" class="form-input" placeholder="name@schule.de"></div>
+    <button class="btn btn-primary" onclick="saveGroupSettings()">Speichern</button>`;
+  document.getElementById('itemDetailContent').innerHTML=html;
+  openModal('itemDetailOverlay');
+}
+window.openGroupManage=openGroupManage;
+
+async function removeGroupMember(email){
+  const c=chats[activeChatId]; if(!c) return;
+  if(email===currentUser.email) return alert('Du kannst dich nicht selbst entfernen.');
+  c.members=(c.members||[]).filter(m=>m!==email);
+  await saveData();
+  openGroupManage();
+}
+window.removeGroupMember=removeGroupMember;
+
+async function saveGroupSettings(){
+  const c=chats[activeChatId]; if(!c) return;
+  const name=document.getElementById('grpNameEdit').value.trim();
+  const add=(document.getElementById('grpAddMember').value||'').trim().toLowerCase();
+  if(name) c.name=name;
+  if(add){
+    if(!users[add]) return alert('Nutzer nicht gefunden.');
+    if(!c.members.includes(add)) c.members.push(add);
+  }
+  await saveData();
+  closeModal('itemDetailOverlay');
+  renderChatList();
+  renderChatThread();
+}
+window.saveGroupSettings=saveGroupSettings;
+
+function renderChatPage(){
+  ensureChatBootstrap();
+  renderChatList();
+  if(activeChatId && chats[activeChatId]) renderChatThread();
+}
+window.renderChatPage=renderChatPage;
+
 // ── SETTINGS ──────────────────────────────────────
 function openSettings(){
   document.getElementById('settingsName').value=currentUser.name;
@@ -2222,26 +2245,6 @@ function openSettings(){
   if(currentUser.isAdmin){
     const others=Object.values(users).filter(u=>u.email!==currentUser.email);
     let adminHTML = `<div class="admin-section"><h4>👑 ADMIN – Berechtigungen</h4><p style="font-size:0.78rem;color:var(--text-muted);margin-bottom:10px;">Erlaube Mitschülern, Einträge hinzuzufügen</p>${others.map(u=>`<div class="admin-user-row"><span class="admin-user-name">${u.name}</span><label class="toggle"><input type="checkbox" ${u.canPost?'checked':''} onchange="toggleCanPost('${u.email}',this.checked)"><span class="toggle-slider"></span></label></div>`).join('')}</div>`;
-    
-    // Add Mensaplan status
-    const today = new Date();
-    today.setHours(0,0,0,0);
-    const dateKey = today.toISOString().split('T')[0];
-    const mensaStatus = mensaplan[dateKey]?.meals?.length || 0;
-    const mensaSource = mensaplan[dateKey]?.source || 'keine';
-    
-    adminHTML += `<div class="admin-section"><h4>🍽️ MENSAPLAN-VERWALTUNG</h4>
-      <p style="font-size:0.78rem;color:var(--text-muted);margin-bottom:10px;">Automatisches Laden von <strong>hlg-hamburg.de/mammas-canteen</strong></p>
-      <div style="background:rgba(0,180,255,0.08);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:12px;font-size:0.78rem;">
-        <div>✅ Status heute: <strong>${mensaStatus} Gerichte</strong></div>
-        <div style="color:var(--text-muted);margin-top:4px;">Quelle: ${mensaSource}</div>
-      </div>
-      <p style="font-size:0.75rem;color:var(--text-muted);margin-bottom:8px;">Falls automatisches Laden fehlschlägt, korrigiere manuell:</p>
-      <div style="display:flex;gap:8px;margin-bottom:8px;">
-        <textarea id="mensaPlanManualInput" class="form-input" placeholder="Gericht 1&#10;Gericht 2&#10;🌱 Vegan Gericht" rows="2" style="font-size:0.85rem;flex:1;"></textarea>
-        <button class="btn btn-secondary" style="padding:10px 12px;white-space:nowrap;height:fit-content;" onclick="uploadMensaPlanManual(document.getElementById('mensaPlanManualInput').value)">✅ Update</button>
-      </div>
-    </div>`;
     
     adminSec.innerHTML=adminHTML;
   } else adminSec.innerHTML='';
