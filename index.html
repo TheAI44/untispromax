@@ -272,6 +272,24 @@
 
   /* DOUBLE HOUR DIVIDER */
   .double-hour-divider { height: 1px; background: var(--border); margin: 6px 0; opacity: 0.5; }
+
+  /* MEHR POPUP */
+  .mehr-popup { position: fixed; bottom: calc(var(--nav-height) + 8px); right: 12px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: 0 -4px 24px rgba(0,0,0,0.4); z-index: 150; min-width: 180px; padding: 6px 0; }
+  .mehr-popup.hidden { display: none; }
+  .mehr-item { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 18px; border: none; background: transparent; color: var(--text-primary); font-size: 0.88rem; font-family: inherit; cursor: pointer; transition: background 0.15s; }
+  .mehr-item:hover { background: rgba(255,255,255,0.05); }
+  .mehr-item svg { width: 20px; height: 20px; flex-shrink: 0; }
+
+  /* FLASHCARD CARDS */
+  .fc-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px 16px; margin-bottom: 10px; }
+  .fc-topic { font-weight: 700; font-size: 0.95rem; color: var(--text-primary); }
+  .fc-desc { font-size: 0.82rem; color: var(--text-secondary); margin-top: 4px; }
+  .fc-meta { font-size: 0.72rem; color: var(--text-muted); margin-top: 8px; display: flex; align-items: center; gap: 8px; }
+  .fc-actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .fc-actions button { background: transparent; border: none; cursor: pointer; font-size: 0.8rem; padding: 4px 0; }
+  .fc-actions .fc-open { color: var(--accent); font-weight: 600; }
+  .fc-actions .fc-edit { color: var(--text-muted); }
+  .fc-actions .fc-del { color: var(--danger); }
 </style>
 </head>
 <body>
@@ -423,10 +441,15 @@
       <div id="announcementsList"></div>
     </div>
 
+    <!-- FLASHCARDS -->
+    <div class="page" id="flashcardsPage">
+      <div id="flashcardsList"></div>
+    </div>
+
 
   </div>
 
-  <!-- BOTTOM NAV (6 items) -->
+  <!-- BOTTOM NAV (5 items) -->
   <nav class="bottom-nav" id="bottomNav">
     <button class="nav-item active" onclick="goTo('home')" id="nav-home">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
@@ -444,20 +467,31 @@
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
       <span class="nav-label">Tests</span>
     </button>
-    <button class="nav-item" onclick="goTo('events')" id="nav-events">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-      <span class="nav-label">Events</span>
+    <button class="nav-item" onclick="toggleMehrMenu()" id="nav-mehr">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
+      <span class="nav-label">Mehr</span>
     </button>
-    <button class="nav-item" onclick="goTo('recovery')" id="nav-recovery">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-      <span class="nav-label">Krank</span>
-    </button>
-    <button class="nav-item" onclick="goTo('announcements')" id="nav-announcements">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-      <span class="nav-label">News</span>
-    </button>
-
   </nav>
+
+  <!-- MEHR POPUP -->
+  <div class="mehr-popup hidden" id="mehrPopup">
+    <button class="mehr-item" onclick="mehrGoTo('flashcards')">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+      <span>Flashcards</span>
+    </button>
+    <button class="mehr-item" onclick="mehrGoTo('events')">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      <span>Events</span>
+    </button>
+    <button class="mehr-item" onclick="mehrGoTo('recovery')">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+      <span>Krank</span>
+    </button>
+    <button class="mehr-item" onclick="mehrGoTo('announcements')">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      <span>News</span>
+    </button>
+  </div>
 </div>
 
 <button class="fab" id="fabBtn" onclick="openFab()" style="display:none;">
@@ -506,6 +540,19 @@
     <div class="form-group"><label class="form-label">Titel</label><input class="form-input" type="text" id="announceTitle" placeholder="z.B. Wichtige Info"></div>
     <div class="form-group"><label class="form-label">Inhalt</label><textarea class="form-input" id="announceContent" rows="5" placeholder="Schreibe deine Ankündigung…"></textarea></div>
     <button class="btn btn-primary" onclick="saveAnnouncement()">Veröffentlichen</button>
+  </div>
+</div>
+
+<!-- FLASHCARD MODAL -->
+<div class="modal-overlay hidden" id="addFlashcardOverlay" onclick="closeIfBackdrop(event,'addFlashcardOverlay')">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('addFlashcardOverlay')">✕</button>
+    <div class="modal-title" id="addFlashcardTitle">🃏 Flashcard-Set hinzufügen</div>
+    <input type="hidden" id="editFlashcardId">
+    <div class="form-group"><label class="form-label">Thema</label><input class="form-input" type="text" id="fcTopic" placeholder="z.B. Biologie Kapitel 3"></div>
+    <div class="form-group"><label class="form-label">Quizlet-Link</label><input class="form-input" type="url" id="fcLink" placeholder="https://quizlet.com/..."></div>
+    <div class="form-group"><label class="form-label">Beschreibung (optional)</label><textarea class="form-input" id="fcDesc" rows="3" placeholder="Worum geht es?"></textarea></div>
+    <button class="btn btn-primary" onclick="saveFlashcard()">Speichern</button>
   </div>
 </div>
 
@@ -616,7 +663,7 @@ tesseractScript.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesserac
 document.head.appendChild(tesseractScript);
 
 // ── STATE ────────────────────────────────────────
-let currentUser = null, users = {}, homework = [], events = [], wishes = [], announcements = [];
+let currentUser = null, users = {}, homework = [], events = [], wishes = [], announcements = [], flashcards = [];
 let currentPage = 'home', addingFor = 'homework';
 let hwFilter = 'upcoming', testFilter = 'upcoming', eventFilter = 'upcoming';
 let signupTempEmail = '', signupTempPw = '', signupIsAdmin = false;
@@ -752,10 +799,10 @@ async function fbSet(id, v) {
 async function loadAllData() {
   try {
     console.log('[DEBUG] Loading all data from Firestore...');
-    const [hw,ev,us,wi,rec,tt,ann] = await Promise.all([fbGet('homework'),fbGet('events'),fbGet('users'),fbGet('wishes'),fbGet('recovery'),fbGet('timetables'),fbGet('announcements')]);
+    const [hw,ev,us,wi,rec,tt,ann,fc] = await Promise.all([fbGet('homework'),fbGet('events'),fbGet('users'),fbGet('wishes'),fbGet('recovery'),fbGet('timetables'),fbGet('announcements'),fbGet('flashcards')]);
     homework = hw || getSampleHW(); events = ev || getSampleEvents();
     users = us || {}; wishes = wi || []; recoveryEntries = rec || {};
-    timetables = tt || {}; announcements = ann || [];
+    timetables = tt || {}; announcements = ann || []; flashcards = fc || [];
     if (!hw) await fbSet('homework', homework);
     if (!ev) await fbSet('events', events);
     if (!us) await fbSet('users', users);
@@ -763,6 +810,7 @@ async function loadAllData() {
     if (!rec) await fbSet('recovery', recoveryEntries);
     if (!tt) await fbSet('timetables', timetables);
     if (!ann) await fbSet('announcements', announcements);
+    if (!fc) await fbSet('flashcards', flashcards);
     console.log('[DEBUG] All data loaded. Users:', Object.keys(users).length);
   } catch(e) {
     console.error('[DEBUG] Error loading data:', e);
@@ -772,7 +820,7 @@ async function loadAllData() {
 async function saveData() {
   try {
     console.log('[DEBUG] Saving all data...');
-    await Promise.all([fbSet('homework',homework),fbSet('events',events),fbSet('users',users),fbSet('wishes',wishes),fbSet('timetables',timetables),fbSet('recovery',recoveryEntries),fbSet('announcements',announcements)]);
+    await Promise.all([fbSet('homework',homework),fbSet('events',events),fbSet('users',users),fbSet('wishes',wishes),fbSet('timetables',timetables),fbSet('recovery',recoveryEntries),fbSet('announcements',announcements),fbSet('flashcards',flashcards)]);
     console.log('[DEBUG] Data saved successfully');
   } catch(e) {
     console.error('[DEBUG] Error saving data:', e);
@@ -786,6 +834,7 @@ function startRealtimeListeners() {
   onSnapshot(doc(db,'appdata','recovery'), s => { if(s.exists()){recoveryEntries=s.data().value||{}; if(currentPage==='recovery')renderRecovery();} });
   onSnapshot(doc(db,'appdata','timetables'), s => { if(s.exists()){timetables=s.data().value||{}; if(currentPage==='recovery')renderRecovery();} });
   onSnapshot(doc(db,'appdata','announcements'), s => { if(s.exists()){announcements=s.data().value||[]; if(currentPage==='announcements')renderAnnouncements(); if(currentPage==='home')renderHome();} });
+  onSnapshot(doc(db,'appdata','flashcards'), s => { if(s.exists()){flashcards=s.data().value||[]; if(currentPage==='flashcards')renderFlashcards();} });
   onSnapshot(doc(db,'appdata','wishes'), s => {
     if(s.exists()){
       wishes=s.data().value||[];
@@ -1087,14 +1136,16 @@ function startClock() {
 }
 
 // ── NAVIGATION ────────────────────────────────────
-const pageTitles={home:'🏠 Startseite',timetable:'📅 Stundenplan',homework:'📚 Hausaufgaben',tests:'📝 Tests',events:'🗓️ Ereignisse',recovery:'🌡️ Nachholstoff',announcements:'📢 Ankündigungen'};
+const pageTitles={home:'🏠 Startseite',timetable:'📅 Stundenplan',homework:'📚 Hausaufgaben',tests:'📝 Tests',events:'🗓️ Ereignisse',recovery:'🌡️ Nachholstoff',announcements:'📢 Ankündigungen',flashcards:'🃏 Flashcards'};
 
 function goTo(page) {
   currentPage=page;
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   document.getElementById(page+'Page').classList.add('active');
-  document.getElementById('nav-'+page)?.classList.add('active');
+  const navEl=document.getElementById('nav-'+page);
+  if(navEl) navEl.classList.add('active');
+  else document.getElementById('nav-mehr')?.classList.add('active');
   document.getElementById('topbarTitle').textContent=pageTitles[page]||'';
   document.getElementById('fabBtn').style.display='none';
   if(page==='home')renderHome();
@@ -1104,6 +1155,7 @@ function goTo(page) {
   if(page==='events'){renderEvents();if(canEdit())document.getElementById('fabBtn').style.display='flex';}
   if(page==='recovery')renderRecovery();
   if(page==='announcements'){renderAnnouncements();if(canEdit())document.getElementById('fabBtn').style.display='flex';}
+  if(page==='flashcards'){renderFlashcards();if(canEdit())document.getElementById('fabBtn').style.display='flex';}
 }
 window.goTo=goTo;
 
@@ -1117,8 +1169,27 @@ function openFab(){
   else if(currentPage==='tests'){addingFor='tests';openAddModal('tests');}
   else if(currentPage==='events'){addingFor='events';openAddModal('events');}
   else if(currentPage==='announcements'){openAddAnnouncementModal();}
+  else if(currentPage==='flashcards'){openAddFlashcardModal();}
 }
 window.openFab=openFab;
+
+function toggleMehrMenu(){
+  const p=document.getElementById('mehrPopup');
+  p.classList.toggle('hidden');
+}
+window.toggleMehrMenu=toggleMehrMenu;
+
+function mehrGoTo(page){
+  document.getElementById('mehrPopup').classList.add('hidden');
+  goTo(page);
+}
+window.mehrGoTo=mehrGoTo;
+
+document.addEventListener('click',function(e){
+  const popup=document.getElementById('mehrPopup');
+  const btn=document.getElementById('nav-mehr');
+  if(popup&&!popup.contains(e.target)&&!btn.contains(e.target)) popup.classList.add('hidden');
+});
 
 // ── HOME ──────────────────────────────────────────
 function renderHome() {
@@ -1309,8 +1380,8 @@ function renderDayLessons(idx) {
 
   const dayDate=getTTDayDate(idx);
 
-  // Phase 1: collect time-based raw groups
-  const rawGroups = [];
+  // Group lessons by time slot (double hours and parallels stay together)
+  const grouped = [];
   let i = 0;
   while(i < lessons.length) {
     const current = lessons[i];
@@ -1325,7 +1396,7 @@ function renderDayLessons(idx) {
         sameGroup.push(lessons[j]);
         j++;
       }
-      rawGroups.push({lessons: sameGroup, isDouble: true, time: current.time});
+      grouped.push({lessons: sameGroup, isDouble: true});
       i = j;
     } else {
       const sameGroup = [current];
@@ -1334,48 +1405,54 @@ function renderDayLessons(idx) {
         sameGroup.push(lessons[j]);
         j++;
       }
-      rawGroups.push({lessons: sameGroup, isDouble: false, time: current.time});
+      grouped.push({lessons: sameGroup, isDouble: false});
       i = j;
     }
   }
 
-  // Phase 2: split each raw group by subject so parallel subjects get separate cards
-  const grouped = [];
-  rawGroups.forEach(rg => {
-    const bySubject = {};
-    rg.lessons.forEach(l => {
-      if(!bySubject[l.subject]) bySubject[l.subject] = [];
-      bySubject[l.subject].push(l);
-    });
-    Object.entries(bySubject).forEach(([subj, subLessons]) => {
-      grouped.push({lessons: subLessons, isDouble: rg.isDouble && subLessons.length > 1, time: rg.time});
-    });
-  });
-
   el.innerHTML=grouped.map(group=>{
-    const subj=group.lessons[0].subject;
-    const safeSubj=subj.replace(/'/g,"\\'");
-    // Indicators: red corner=test, yellow corner=homework
-    const hasTest=homework.some(h=>!h.done&&['Test','Arbeit','Klausurersatzleistung','Nachschreibtermin'].includes(h.type)&&h.subject===subj&&h.date===dayDate);
-    const hasHW=!hasTest&&homework.some(h=>!h.done&&['Hausaufgabe','KE'].includes(h.type)&&h.subject===subj&&h.date===dayDate);
-    const indHTML=hasTest?`<div class="tt-indicator test-ind" onclick="event.stopPropagation();showTTIndicator('${safeSubj}','${dayDate}')"><span class="tt-indicator-icon">📝</span></div>`:hasHW?`<div class="tt-indicator hw-ind" onclick="event.stopPropagation();showTTIndicator('${safeSubj}','${dayDate}')"><span class="tt-indicator-icon">📋</span></div>`:'';
+    // Collect unique subjects for indicators
+    const subjects=[...new Set(group.lessons.map(l=>l.subject))];
+    const indicators=subjects.map(subj=>{
+      const safeSubj=subj.replace(/'/g,"\\'");
+      const hasTest=homework.some(h=>!h.done&&['Test','Arbeit','Klausurersatzleistung','Nachschreibtermin'].includes(h.type)&&h.subject===subj&&h.date===dayDate);
+      const hasHW=!hasTest&&homework.some(h=>!h.done&&['Hausaufgabe','KE'].includes(h.type)&&h.subject===subj&&h.date===dayDate);
+      if(hasTest) return `<div class="tt-indicator test-ind" onclick="event.stopPropagation();showTTIndicator('${safeSubj}','${dayDate}')"><span class="tt-indicator-icon">📝</span></div>`;
+      if(hasHW) return `<div class="tt-indicator hw-ind" onclick="event.stopPropagation();showTTIndicator('${safeSubj}','${dayDate}')"><span class="tt-indicator-icon">📋</span></div>`;
+      return '';
+    }).filter(Boolean);
+    const indHTML=indicators.length?indicators[0]:'';
+
+    // For double hours, split into first-slot and second-slot lessons
+    let firstSlotTime=group.lessons[0].time;
+    let html='';
+    if(group.isDouble){
+      const slot1=group.lessons.filter(l=>l.time===firstSlotTime);
+      const slot2=group.lessons.filter(l=>l.time!==firstSlotTime);
+      html=renderSlotLessons(slot1,true)+
+        (slot2.length?'<div class="double-hour-divider"></div>'+renderSlotLessons(slot2,false):'');
+    } else {
+      html=renderSlotLessons(group.lessons,true);
+    }
 
     return `<div class="lesson-group${group.isDouble?' double-hour':''}">
-      ${indHTML}
-      ${group.lessons.map((l, li)=>{
-        const cls=l.cancelled?'cancelled':l.substitution?'substitution':'';
-        const tag=l.cancelled?`<span class="tag-cancel">ENTFALL</span>`:l.substitution?`<span class="tag-sub">VERTRETUNG</span>`:'';
-        const divider=group.isDouble&&li>0&&group.lessons[li-1].time!==l.time?'<div class="double-hour-divider"></div>':'';
-        return `${divider}<div class="lesson-group-header">
-          ${li===0?`<div class="lesson-time">${l.time}</div>`:'<div class="lesson-time"></div>'}
-          <div class="lesson-subjects" style="flex:1;">
-            <div class="lesson-item ${cls}">
-              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">${tag}<span class="lesson-subject">${l.subject}</span></div>
-              <div class="lesson-room">${expandTeacherName(l.teacher)} · ${l.room}${l.note?' · '+l.note:''}</div>
-            </div>
-          </div>
-        </div>`;
-      }).join('')}
+      ${indHTML}${html}
+    </div>`;
+  }).join('');
+}
+
+function renderSlotLessons(lessons, showTime){
+  return lessons.map((l,i)=>{
+    const cls=l.cancelled?'cancelled':l.substitution?'substitution':'';
+    const tag=l.cancelled?`<span class="tag-cancel">ENTFALL</span>`:l.substitution?`<span class="tag-sub">VERTRETUNG</span>`:'';
+    return `<div class="lesson-group-header">
+      ${showTime&&i===0?`<div class="lesson-time">${l.time}</div>`:'<div class="lesson-time"></div>'}
+      <div class="lesson-subjects" style="flex:1;">
+        <div class="lesson-item ${cls}">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">${tag}<span class="lesson-subject">${l.subject}</span></div>
+          <div class="lesson-room">${expandTeacherName(l.teacher)} · ${l.room}${l.note?' · '+l.note:''}</div>
+        </div>
+      </div>
     </div>`;
   }).join('');
 }
@@ -1584,7 +1661,7 @@ function displayRecoveryTimetable(container, lessons, dateKey, hasData=false) {
   }
   
   // Group lessons by time (same as timetable page)
-  const rawGroups = [];
+  const grouped = [];
   let i = 0;
   while(i < lessons.length) {
     const current = lessons[i];
@@ -1599,7 +1676,7 @@ function displayRecoveryTimetable(container, lessons, dateKey, hasData=false) {
         sameGroup.push(lessons[j]);
         j++;
       }
-      rawGroups.push({lessons: sameGroup, isDouble: true});
+      grouped.push({lessons: sameGroup, isDouble: true});
       i = j;
     } else {
       const sameGroup = [current];
@@ -1608,41 +1685,23 @@ function displayRecoveryTimetable(container, lessons, dateKey, hasData=false) {
         sameGroup.push(lessons[j]);
         j++;
       }
-      rawGroups.push({lessons: sameGroup, isDouble: false});
+      grouped.push({lessons: sameGroup, isDouble: false});
       i = j;
     }
   }
 
-  // Split by subject so parallel subjects get separate cards
-  const grouped = [];
-  rawGroups.forEach(rg => {
-    const bySubject = {};
-    rg.lessons.forEach(l => {
-      if(!bySubject[l.subject]) bySubject[l.subject] = [];
-      bySubject[l.subject].push(l);
-    });
-    Object.entries(bySubject).forEach(([subj, subLessons]) => {
-      grouped.push({lessons: subLessons, isDouble: rg.isDouble && subLessons.length > 1});
-    });
-  });
-
   container.innerHTML = grouped.map(group => {
-    return `<div class="lesson-group${group.isDouble?' double-hour':''}">
-      ${group.lessons.map((l, idx) => {
-        const cls = l.cancelled ? 'cancelled' : l.substitution ? 'substitution' : '';
-        const tag = l.cancelled ? `<span class="tag-cancel">ENTFALL</span>` : l.substitution ? `<span class="tag-sub">VERTRETUNG</span>` : '';
-        const divider = group.isDouble && idx > 0 && group.lessons[idx-1].time !== l.time ? '<div class="double-hour-divider"></div>' : '';
-        return `${divider}<div class="lesson-group-header">
-          ${idx===0?`<div class="lesson-time">${l.time}</div>`:'<div class="lesson-time"></div>'}
-          <div class="lesson-subjects" style="flex:1;">
-            <div class="lesson-item ${cls}">
-              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">${tag}<span class="lesson-subject">${l.subject}</span></div>
-              <div class="lesson-room">${expandTeacherName(l.teacher)} · ${l.room}${l.note ? ' · '+l.note : ''}</div>
-            </div>
-          </div>
-        </div>`;
-      }).join('')}
-    </div>`;
+    let firstSlotTime=group.lessons[0].time;
+    let html='';
+    if(group.isDouble){
+      const slot1=group.lessons.filter(l=>l.time===firstSlotTime);
+      const slot2=group.lessons.filter(l=>l.time!==firstSlotTime);
+      html=renderSlotLessons(slot1,true)+
+        (slot2.length?'<div class="double-hour-divider"></div>'+renderSlotLessons(slot2,false):'');
+    } else {
+      html=renderSlotLessons(group.lessons,true);
+    }
+    return `<div class="lesson-group${group.isDouble?' double-hour':''}">${html}</div>`;
   }).join('');
 }
 window.renderRecoveryDay=renderRecoveryDay;
@@ -2179,6 +2238,75 @@ async function saveAnnouncement(){
   renderAnnouncements();renderHome();
 }
 window.saveAnnouncement=saveAnnouncement;
+
+// ── FLASHCARDS ────────────────────────────────────
+function renderFlashcards(){
+  const el=document.getElementById('flashcardsList');
+  if(!el)return;
+  const sorted=[...flashcards].sort((a,b)=>b.ts-a.ts);
+  el.innerHTML=sorted.length===0?`<div class="empty-state">Keine Flashcard-Sets vorhanden</div>`:sorted.map(fc=>{
+    const dateStr=new Date(fc.ts).toLocaleDateString('de-DE',{day:'2-digit',month:'long',year:'numeric'});
+    const author=fc.authorName||'Unbekannt';
+    const editBtns=canEditItem(fc)?`<button class="fc-edit" onclick="event.stopPropagation();editFlashcard('${fc.id}')">✏️ Bearbeiten</button><button class="fc-del" onclick="event.stopPropagation();deleteFlashcard('${fc.id}')">🗑 Löschen</button>`:'';
+    const safeLink=fc.link.replace(/'/g,"&#39;");
+    return `<div class="fc-card">
+      <div class="fc-topic">${fc.topic}</div>
+      ${fc.desc?`<div class="fc-desc">${fc.desc}</div>`:''}
+      <div class="fc-meta"><span>von ${author}</span><span>·</span><span>${dateStr}</span></div>
+      <div class="fc-actions"><button class="fc-open" onclick="window.open('${safeLink}','_blank')">🔗 Set öffnen</button>${editBtns}</div>
+    </div>`;
+  }).join('');
+}
+
+function openAddFlashcardModal(){
+  document.getElementById('addFlashcardTitle').textContent='🃏 Flashcard-Set hinzufügen';
+  document.getElementById('editFlashcardId').value='';
+  document.getElementById('fcTopic').value='';
+  document.getElementById('fcLink').value='';
+  document.getElementById('fcDesc').value='';
+  openModal('addFlashcardOverlay');
+}
+window.openAddFlashcardModal=openAddFlashcardModal;
+
+function editFlashcard(id){
+  const fc=flashcards.find(x=>x.id===id);
+  if(!fc||!canEditItem(fc))return;
+  document.getElementById('addFlashcardTitle').textContent='✏️ Flashcard-Set bearbeiten';
+  document.getElementById('editFlashcardId').value=id;
+  document.getElementById('fcTopic').value=fc.topic;
+  document.getElementById('fcLink').value=fc.link;
+  document.getElementById('fcDesc').value=fc.desc||'';
+  openModal('addFlashcardOverlay');
+}
+window.editFlashcard=editFlashcard;
+
+async function deleteFlashcard(id){
+  const fc=flashcards.find(x=>x.id===id);
+  if(!fc||!canEditItem(fc))return;
+  flashcards=flashcards.filter(x=>x.id!==id);
+  await saveData();
+  renderFlashcards();
+}
+window.deleteFlashcard=deleteFlashcard;
+
+async function saveFlashcard(){
+  const topic=document.getElementById('fcTopic').value.trim();
+  const link=document.getElementById('fcLink').value.trim();
+  const desc=document.getElementById('fcDesc').value.trim();
+  if(!topic||!link)return alert('Bitte Thema und Quizlet-Link ausfüllen.');
+  try { new URL(link); } catch(_) { return alert('Bitte einen gültigen Link eingeben.'); }
+  const editId=document.getElementById('editFlashcardId').value;
+  if(editId){
+    const fc=flashcards.find(x=>x.id===editId);
+    if(fc){fc.topic=topic;fc.link=link;fc.desc=desc;}
+  } else {
+    flashcards.push({id:uid(),topic,link,desc,ts:Date.now(),createdBy:currentUser.email,authorName:currentUser.name});
+  }
+  await saveData();
+  closeModal('addFlashcardOverlay');
+  renderFlashcards();
+}
+window.saveFlashcard=saveFlashcard;
 
 // ── SUBJECT DROPDOWN (from Untis) ─────────────────
 function getUntisSubjects(){
