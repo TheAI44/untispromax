@@ -156,7 +156,8 @@
   .lesson-group-header:last-child { margin-bottom: 0; }
   .lesson-time { font-family: 'Space Mono', monospace; font-size: 0.75rem; color: var(--text-muted); min-width: 80px; flex-shrink: 0; }
   .lesson-subjects { display: flex; gap: 8px; flex-wrap: wrap; flex: 1; }
-  .lesson-item { display: flex; flex-direction: column; flex: 1; min-width: 140px; }
+  .lesson-item { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex: 1; min-width: 140px; }
+  .lesson-item-main { flex: 1; min-width: 0; }
   .lesson-subject { font-weight: 600; font-size: 0.9rem; }
   .lesson-room { font-size: 0.78rem; color: var(--text-secondary); margin-top: 3px; }
   .lesson-item.cancelled { opacity: 0.6; }
@@ -165,6 +166,10 @@
   .lesson-group.holiday { border-left: 3px solid var(--success); background: rgba(0,229,160,0.05); }
   .tag-sub { font-size: 0.68rem; padding: 2px 8px; border-radius: 10px; background: rgba(255,179,0,0.12); color: var(--warning); font-weight: 700; }
   .tag-cancel { font-size: 0.68rem; padding: 2px 8px; border-radius: 10px; background: rgba(255,64,96,0.1); color: var(--danger); font-weight: 700; }
+  .lesson-indicators { display: flex; gap: 6px; flex-shrink: 0; margin-top: 1px; }
+  .lesson-indicator { width: 16px; height: 16px; border: none; border-radius: 50%; cursor: pointer; box-shadow: 0 0 0 1px rgba(255,255,255,0.18) inset; }
+  .lesson-indicator.hw-indicator { background: var(--warning); }
+  .lesson-indicator.test-indicator { background: var(--danger); }
   .tt-loading { text-align: center; padding: 40px; color: var(--text-muted); }
   .spinner { width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 12px; }
   @keyframes spin { to { transform: rotate(360deg); } }
@@ -539,6 +544,15 @@
     <input type="hidden" id="editAnnounceId">
     <div class="form-group"><label class="form-label">Titel</label><input class="form-input" type="text" id="announceTitle" placeholder="z.B. Wichtige Info"></div>
     <div class="form-group"><label class="form-label">Inhalt</label><textarea class="form-input" id="announceContent" rows="5" placeholder="Schreibe deine Ankündigung…"></textarea></div>
+    <div class="form-group">
+      <label class="form-label">Anhänge (optional)</label>
+      <input type="file" id="announceFileInput" multiple accept="image/*,.pdf,.doc,.docx" style="display:none;" onchange="handleAnnouncementFile(event)">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-secondary" style="width:auto;padding:8px 14px;font-size:0.82rem;" onclick="document.getElementById('announceFileInput').click()">📎 Datei anhängen</button>
+        <button class="btn btn-secondary" style="width:auto;padding:8px 14px;font-size:0.82rem;" onclick="clearAnnouncementFiles()">Zurücksetzen</button>
+      </div>
+      <div id="announceFilePreview" style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;"></div>
+    </div>
     <button class="btn btn-primary" onclick="saveAnnouncement()">Veröffentlichen</button>
   </div>
 </div>
@@ -596,6 +610,7 @@
       <button class="btn btn-secondary" style="width:auto;padding:8px 14px;font-size:0.82rem;" onclick="document.getElementById('addItemFile').click()">📎 Datei anhängen</button>
       <div id="addFilePreview" style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;"></div>
     </div>
+    <div class="msg msg-error" id="addItemError" style="display:none;"></div>
     <button class="btn btn-primary" onclick="saveNewItem()">Eintrag speichern</button>
   </div>
 </div>
@@ -636,6 +651,7 @@
       <label class="form-label">Bis-Datum</label>
       <input class="form-input" type="date" id="editItemDateEnd">
     </div>
+    <div class="msg msg-error" id="editItemError" style="display:none;"></div>
     <button class="btn btn-primary" onclick="saveEditItem()">Änderungen speichern</button>
   </div>
 </div>
@@ -671,6 +687,7 @@ let isRegistering = false;
 let ttData = null, ttWeekOffset = 0;
 let selectedDayIdx = new Date().getDay() === 0 ? 4 : (new Date().getDay() === 6 ? 4 : new Date().getDay() - 1);
 let addItemFiles = [];
+let addAnnouncementFiles = [];
 let timetables = {};
 const SERVER_URL = 'https://untispromax-server-1.onrender.com';
 let notifSettings = JSON.parse(localStorage.getItem('notifSettings') || '{"all":false,"hw24":false}');
@@ -876,7 +893,7 @@ function getSampleHW() {
   ];
 }
 function getSampleEvents() {
-  const d=(n)=>{const dt=new Date();dt.setDate(dt.getDate()+n);return dt.toISOString().split('T')[0];};
+  const d=(n)=>{const dt=new Date();dt.setDate(dt.getDate()+n);return toDateKey(dt);};
   return [
     // Ferienblock (grau = schulfrei)
     {id:uid(),title:'🎉 Ferien',desc:'Schulferien – kein Unterricht.',date:'2026-03-02',dateEnd:'2026-03-13',createdBy:'system',allDay:true,color:'success'},
@@ -1165,11 +1182,27 @@ function canAdd(){return currentUser&&(currentUser.role==='superadmin'||currentU
 function canEditItem(item){return currentUser&&(currentUser.role==='superadmin'||(currentUser.role==='admin'&&item&&(item.createdBy===currentUser.email||!item.createdBy)));}
 function canEdit(){return canAdd();}
 function openFab(){
-  if(currentPage==='homework'){addingFor='homework';openAddModal('homework');}
-  else if(currentPage==='tests'){addingFor='tests';openAddModal('tests');}
-  else if(currentPage==='events'){addingFor='events';openAddModal('events');}
-  else if(currentPage==='announcements'){openAddAnnouncementModal();}
-  else if(currentPage==='flashcards'){openAddFlashcardModal();}
+  switch(currentPage){
+    case 'homework':
+    case 'aufgaben':
+      addingFor='homework';
+      openAddModal('homework');
+      break;
+    case 'tests':
+      addingFor='tests';
+      openAddModal('tests');
+      break;
+    case 'events':
+      addingFor='events';
+      openAddModal('events');
+      break;
+    case 'announcements':
+      openAddAnnouncementModal();
+      break;
+    case 'flashcards':
+      openAddFlashcardModal();
+      break;
+  }
 }
 window.openFab=openFab;
 
@@ -1332,6 +1365,15 @@ async function refreshTimetableBackground(){
 window.loadTimetableData=loadTimetableData;
 
 function fmtDate(s){if(!s)return '';const d=new Date(s);return d.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'});}
+function toDateKey(date){
+  return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+}
+function parseDateKey(dateStr){
+  if(!dateStr)return null;
+  const [year,month,day]=dateStr.split('-').map(Number);
+  if(!year||!month||!day)return null;
+  return new Date(year,month-1,day);
+}
 
 // WebUntis only reliably has current week + next week (offset 0 and 1)
 const TT_MIN_OFFSET = 0;
@@ -1365,9 +1407,9 @@ window.selectDay=selectDay;
 
 function getTTDayDate(idx) {
   if(!ttData?.week?.monday) return '';
-  const mon=new Date(ttData.week.monday+'T00:00:00');
+  const mon=parseDateKey(ttData.week.monday);
   mon.setDate(mon.getDate()+idx);
-  return mon.toISOString().split('T')[0];
+  return toDateKey(mon);
 }
 
 function renderDayLessons(idx) {
@@ -1411,46 +1453,38 @@ function renderDayLessons(idx) {
   }
 
   el.innerHTML=grouped.map(group=>{
-    // Collect unique subjects for indicators
-    const subjects=[...new Set(group.lessons.map(l=>l.subject))];
-    const indicators=subjects.map(subj=>{
-      const safeSubj=subj.replace(/'/g,"\\'");
-      const hasTest=homework.some(h=>!h.done&&['Test','Arbeit','Klausurersatzleistung','Nachschreibtermin'].includes(h.type)&&h.subject===subj&&h.date===dayDate);
-      const hasHW=!hasTest&&homework.some(h=>!h.done&&['Hausaufgabe','KE'].includes(h.type)&&h.subject===subj&&h.date===dayDate);
-      if(hasTest) return `<div class="tt-indicator test-ind" onclick="event.stopPropagation();showTTIndicator('${safeSubj}','${dayDate}')"><span class="tt-indicator-icon">📝</span></div>`;
-      if(hasHW) return `<div class="tt-indicator hw-ind" onclick="event.stopPropagation();showTTIndicator('${safeSubj}','${dayDate}')"><span class="tt-indicator-icon">📋</span></div>`;
-      return '';
-    }).filter(Boolean);
-    const indHTML=indicators.length?indicators[0]:'';
-
     // For double hours, split into first-slot and second-slot lessons
     let firstSlotTime=group.lessons[0].time;
     let html='';
     if(group.isDouble){
       const slot1=group.lessons.filter(l=>l.time===firstSlotTime);
       const slot2=group.lessons.filter(l=>l.time!==firstSlotTime);
-      html=renderSlotLessons(slot1,true)+
-        (slot2.length?'<div class="double-hour-divider"></div>'+renderSlotLessons(slot2,false):'');
+      html=renderSlotLessons(slot1,true,dayDate)+
+        (slot2.length?'<div class="double-hour-divider"></div>'+renderSlotLessons(slot2,false,dayDate):'');
     } else {
-      html=renderSlotLessons(group.lessons,true);
+      html=renderSlotLessons(group.lessons,true,dayDate);
     }
 
     return `<div class="lesson-group${group.isDouble?' double-hour':''}">
-      ${indHTML}${html}
+      ${html}
     </div>`;
   }).join('');
 }
 
-function renderSlotLessons(lessons, showTime){
+function renderSlotLessons(lessons, showTime, dateKey=''){
   return lessons.map((l,i)=>{
     const cls=l.cancelled?'cancelled':l.substitution?'substitution':'';
     const tag=l.cancelled?`<span class="tag-cancel">ENTFALL</span>`:l.substitution?`<span class="tag-sub">VERTRETUNG</span>`:'';
+    const indicators=buildLessonIndicators(l.subject,dateKey);
     return `<div class="lesson-group-header">
       ${showTime&&i===0?`<div class="lesson-time">${l.time}</div>`:'<div class="lesson-time"></div>'}
       <div class="lesson-subjects" style="flex:1;">
         <div class="lesson-item ${cls}">
-          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">${tag}<span class="lesson-subject">${l.subject}</span></div>
-          <div class="lesson-room">${expandTeacherName(l.teacher)} · ${l.room}${l.note?' · '+l.note:''}</div>
+          <div class="lesson-item-main">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">${tag}<span class="lesson-subject">${l.subject}</span></div>
+            <div class="lesson-room">${expandTeacherName(l.teacher)} · ${l.room}${l.note?' · '+l.note:''}</div>
+          </div>
+          ${indicators}
         </div>
       </div>
     </div>`;
@@ -1480,33 +1514,33 @@ async function saveRecoveryEntries() {
 
 // Helper: check if date is weekend
 function isWeekend(dateStr) {
-  const d = new Date(dateStr);
+  const d = parseDateKey(dateStr);
   const day = d.getDay();
   return day === 0 || day === 6; // Sunday or Saturday
 }
 
 // Helper: check if date is in holiday period
 function isHoliday(dateStr) {
-  const d = new Date(dateStr);
+  const d = parseDateKey(dateStr);
   return events.some(e => {
     if(!e.title.includes('Ferien') && !e.title.includes('Schulfrei')) return false;
-    const start = new Date(e.date);
-    const end = e.dateEnd ? new Date(e.dateEnd) : start;
+    const start = parseDateKey(e.date);
+    const end = e.dateEnd ? parseDateKey(e.dateEnd) : start;
     return d >= start && d <= end;
   });
 }
 
 // Helper: get holiday dates (to show 2 weeks before)
 function getHolidayInfo(dateStr) {
-  const d = new Date(dateStr);
+  const d = parseDateKey(dateStr);
   const holiday = events.find(e => {
     if(!e.title.includes('Ferien') && !e.title.includes('Schulfrei')) return false;
-    const start = new Date(e.date);
-    const end = e.dateEnd ? new Date(e.dateEnd) : start;
+    const start = parseDateKey(e.date);
+    const end = e.dateEnd ? parseDateKey(e.dateEnd) : start;
     return d >= start && d <= end;
   });
   if(!holiday) return null;
-  return { start: new Date(holiday.date), end: holiday.dateEnd ? new Date(holiday.dateEnd) : new Date(holiday.date) };
+  return { start: parseDateKey(holiday.date), end: holiday.dateEnd ? parseDateKey(holiday.dateEnd) : parseDateKey(holiday.date) };
 }
 
 // Helper: check if should show day (weekday + 2 weeks before holidays)
@@ -1518,16 +1552,16 @@ function shouldShowDay(dateStr) {
   if(!isHoliday(dateStr)) return true;
   
   // For holidays, show if within 2 weeks before start
-  const d = new Date(dateStr);
+  const d = parseDateKey(dateStr);
   const holiday = events.find(e => {
     if(!e.title.includes('Ferien') && !e.title.includes('Schulfrei')) return false;
-    const start = new Date(e.date);
-    const end = e.dateEnd ? new Date(e.dateEnd) : start;
+    const start = parseDateKey(e.date);
+    const end = e.dateEnd ? parseDateKey(e.dateEnd) : start;
     return d >= start && d <= end;
   });
   
   if(!holiday) return true;
-  const holidayStart = new Date(holiday.date);
+  const holidayStart = parseDateKey(holiday.date);
   const twoWeeksBefore = new Date(holidayStart);
   twoWeeksBefore.setDate(twoWeeksBefore.getDate() - 14);
   
@@ -1536,13 +1570,13 @@ function shouldShowDay(dateStr) {
 
 function renderRecovery() {
   const today = new Date();
-  const todayKey = today.toISOString().split('T')[0];
+  const todayKey = toDateKey(today);
   const validDays = [];
   
   // Get last 30 days but only valid weekdays
   for(let i=0; i<30; i++){
     const d = new Date(today); d.setDate(d.getDate()-i);
-    const key = d.toISOString().split('T')[0];
+    const key = toDateKey(d);
     if(shouldShowDay(key)) {
       validDays.push(d);
     }
@@ -1553,7 +1587,7 @@ function renderRecovery() {
   el.innerHTML = `
     <button class="filter-tab active" onclick="selectRecoveryDate('${todayKey}',this)">🎯 Heute</button>
     ${validDays.map(d => {
-    const key = d.toISOString().split('T')[0];
+    const key = toDateKey(d);
     const dayName = d.toLocaleDateString('de-DE',{weekday:'short'});
     const dateStr = d.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'});
     const hasEntries = (recoveryEntries[key]||[]).length > 0;
@@ -1582,7 +1616,7 @@ window.selectRecoveryDate=selectRecoveryDate;
 function renderRecoveryDay(dateKey) {
   const el = document.getElementById('recoveryContent');
   const entries = recoveryEntries[dateKey] || [];
-  const d = new Date(dateKey);
+  const d = parseDateKey(dateKey);
   const dateLabel = d.toLocaleDateString('de-DE',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
   const dayIdx = d.getDay() === 0 ? 4 : (d.getDay() === 6 ? 4 : d.getDay() - 1); // Mon=0, Fri=4
 
@@ -1631,11 +1665,11 @@ async function loadRecoveryTimetable(dateKey, dayIdx) {
   if(!container) return;
   
   // Get the monday of the week containing this date
-  const d = new Date(dateKey);
+  const d = parseDateKey(dateKey);
   const dayOfWeek = d.getDay();
   const diff = d.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
   const monday = new Date(d.setDate(diff));
-  const mondayStr = monday.toISOString().split('T')[0];
+  const mondayStr = toDateKey(monday);
   
   // Try to load from Firestore timetables
   if(timetables[mondayStr]) {
@@ -1696,10 +1730,10 @@ function displayRecoveryTimetable(container, lessons, dateKey, hasData=false) {
     if(group.isDouble){
       const slot1=group.lessons.filter(l=>l.time===firstSlotTime);
       const slot2=group.lessons.filter(l=>l.time!==firstSlotTime);
-      html=renderSlotLessons(slot1,true)+
-        (slot2.length?'<div class="double-hour-divider"></div>'+renderSlotLessons(slot2,false):'');
+      html=renderSlotLessons(slot1,true,dateKey)+
+        (slot2.length?'<div class="double-hour-divider"></div>'+renderSlotLessons(slot2,false,dateKey):'');
     } else {
-      html=renderSlotLessons(group.lessons,true);
+      html=renderSlotLessons(group.lessons,true,dateKey);
     }
     return `<div class="lesson-group${group.isDouble?' double-hour':''}">${html}</div>`;
   }).join('');
@@ -1711,7 +1745,7 @@ let recoveryAddFiles = [];
 
 function openAddRecovery(dateKey) {
   recoveryAddDate = dateKey; recoveryAddFiles = [];
-  const d = new Date(dateKey);
+  const d = parseDateKey(dateKey);
   const label = d.toLocaleDateString('de-DE',{weekday:'long',day:'2-digit',month:'long'});
   document.getElementById('itemDetailContent').innerHTML = `
     <div class="modal-title">✏️ Stoff eintragen</div>
@@ -1908,6 +1942,7 @@ function renderAttach(a) {
 
 function openAddModal(type){
   addingFor=type; addItemFiles=[];
+  clearItemFormError('add');
   document.getElementById('addItemTitle').textContent={homework:'Hausaufgabe hinzufügen',tests:'Test hinzufügen',events:'Ereignis hinzufügen'}[type];
   document.getElementById('addItemDesc').value='';
   document.getElementById('addItemDate').value='';
@@ -1915,12 +1950,15 @@ function openAddModal(type){
   document.getElementById('addItemMultiDay').checked=false;
   document.getElementById('addItemDateEndGroup').style.display='none';
   document.getElementById('addFilePreview').innerHTML='';
-  document.getElementById('addSubjectError')?.remove();
   const ts=document.getElementById('addItemType');
   const tg=ts.closest('.form-group');
   const subjSel=document.getElementById('addItemSubject');
   const subjRow=subjSel.closest('.row');
-  populateSubjectDropdown(subjSel);
+  try {
+    populateSubjectDropdown(subjSel);
+  } catch (_) {
+    subjSel.innerHTML='<option value="">Fach wählen…</option><option value="Allgemein">Allgemein</option>';
+  }
   subjSel.value='';
   if(type==='homework'){ts.innerHTML='<option value="Hausaufgabe">Hausaufgabe</option>';tg.style.display='none';subjRow.style.display='';}
   else if(type==='tests'){ts.innerHTML='<option value="Test">Test</option><option value="Arbeit">Arbeit</option><option value="Klausurersatzleistung">Klausurersatzleistung</option>';tg.style.display='';subjRow.style.display='';}
@@ -1930,7 +1968,7 @@ function openAddModal(type){
 }
 window.openAddModal=openAddModal;
 
-function setNextWeek(){const d=new Date();d.setDate(d.getDate()+7);document.getElementById('addItemDate').value=d.toISOString().split('T')[0];}
+function setNextWeek(){const d=new Date();d.setDate(d.getDate()+7);document.getElementById('addItemDate').value=toDateKey(d);}
 window.setNextWeek=setNextWeek;
 
 function handleAddFile(e){
@@ -1948,18 +1986,24 @@ function handleAddFile(e){
 window.handleAddFile=handleAddFile;
 
 async function saveNewItem(){
+  clearItemFormError('add');
   const desc=document.getElementById('addItemDesc').value.trim();
   const subj=document.getElementById('addItemSubject').value.trim();
   const date=document.getElementById('addItemDate').value;
   const type=document.getElementById('addItemType').value;
-  if(!desc||!date)return alert('Bitte Beschreibung und Datum ausfüllen.');
-  // Subject-date validation for homework/tests
-  if(addingFor!=='events' && subj && date && !validateSubjectOnDate(subj, date)){
-    return alert('Fach ist an diesem Datum nicht vorhanden.');
+  if(!desc||!date)return showItemFormError('add','Bitte Beschreibung und Datum ausfüllen.');
+  if(addingFor!=='events'&&!subj){
+    return showItemFormError('add','Bitte ein Fach aus Untis wählen.');
+  }
+  if(addingFor!=='events'){
+    const validation=validateSubjectOnDate(subj,date);
+    if(!validation.valid){
+      return showItemFormError('add',validation.message);
+    }
   }
   // Check total attachment size (Firestore limit ~900KB per doc to be safe)
   const totalSize = addItemFiles.reduce((s,f)=>s+f.data.length,0);
-  if(totalSize > 800000) return alert('Anhänge zu groß (max. ~600KB gesamt). Bitte kleinere Dateien wählen.');
+  if(totalSize > 800000) return showItemFormError('add','Anhänge zu groß (max. ~600KB gesamt). Bitte kleinere Dateien wählen.');
   const dateEnd = document.getElementById('addItemMultiDay').checked ? document.getElementById('addItemDateEnd').value : null;
   if(addingFor==='events'){
     const evDesc=document.getElementById('addEventDesc').value.trim();
@@ -2097,6 +2141,7 @@ function openEditItem(id, kind){
     }
   }
   if(!item)return;
+  clearItemFormError('edit');
   document.getElementById('editItemId').value=id;
   document.getElementById('editItemKind').value=kind;
   if(kind==='event'){
@@ -2111,7 +2156,7 @@ function openEditItem(id, kind){
     ts.innerHTML='<option value="Allgemein">Allgemein</option>';
     ts.closest('.form-group').style.display='none';
     const es=document.getElementById('editItemSubject');
-    populateSubjectDropdown(es);
+    populateSubjectDropdown(es,item.subject||'',true);
     es.value=item.subject||'';
     document.getElementById('editItemDateEndGroup').style.display='none';
   } else {
@@ -2122,7 +2167,7 @@ function openEditItem(id, kind){
     if(kind==='hw'){ts.innerHTML='<option value="Hausaufgabe">Hausaufgabe</option>';ts.value=item.type||'Hausaufgabe';tg.style.display='none';}
     else if(kind==='test'){ts.innerHTML='<option value="Test">Test</option><option value="Arbeit">Arbeit</option><option value="Klausurersatzleistung">Klausurersatzleistung</option><option value="Nachschreibtermin">Nachschreibtermin</option>';ts.value=item.type||'';tg.style.display='';}
     const es=document.getElementById('editItemSubject');
-    populateSubjectDropdown(es);
+    populateSubjectDropdown(es,item.subject||'',item.subject==='Allgemein');
     es.value=item.subject||'';
     document.getElementById('editItemDateEndGroup').style.display='none';
   }
@@ -2132,12 +2177,13 @@ function openEditItem(id, kind){
 window.openEditItem=openEditItem;
 
 async function saveEditItem(){
+  clearItemFormError('edit');
   const id=document.getElementById('editItemId').value;
   const kind=document.getElementById('editItemKind').value;
   const desc=document.getElementById('editItemDesc').value.trim();
   const date=document.getElementById('editItemDate').value;
   const dateEnd=document.getElementById('editItemDateEnd').value||null;
-  if(!desc||!date)return alert('Pflichtfelder ausfüllen.');
+  if(!desc||!date)return showItemFormError('edit','Pflichtfelder ausfüllen.');
   // Permission check
   let checkItem;
   if(kind==='event') checkItem=events.find(e=>e.id===id);
@@ -2150,8 +2196,12 @@ async function saveEditItem(){
   } else if(kind==='hw'||kind==='test'){
     const hw=homework.find(h=>h.id===id);
     if(hw){
+      const subject=document.getElementById('editItemSubject').value.trim();
+      if(!subject)return showItemFormError('edit','Bitte ein Fach aus Untis wählen.');
+      const validation=validateSubjectOnDate(subject,date);
+      if(!validation.valid)return showItemFormError('edit',validation.message);
       hw.desc=desc; hw.date=date;
-      hw.subject=document.getElementById('editItemSubject').value.trim();
+      hw.subject=subject;
       hw.type=document.getElementById('editItemType').value;
     }
   } else if(kind==='recovery'){
@@ -2179,10 +2229,12 @@ function renderAnnouncements(){
     const dateStr=new Date(a.ts).toLocaleDateString('de-DE',{day:'2-digit',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'});
     const author=a.authorName||'Unbekannt';
     const editBtns=canEditItem(a)?`<div style="display:flex;gap:8px;margin-top:10px;"><button style="background:transparent;border:none;color:var(--accent);cursor:pointer;font-size:0.8rem;" onclick="editAnnouncement('${a.id}')">✏️ Bearbeiten</button><button style="background:transparent;border:none;color:var(--danger);cursor:pointer;font-size:0.8rem;" onclick="deleteAnnouncement('${a.id}')">🗑 Löschen</button></div>`:'';
+    const attachHtml=(a.attachments||[]).length>0?`<div class="attach-group">${(a.attachments||[]).map(att=>renderAttach(att)).join('')}</div>`:'';
     return `<div class="announce-card ${isUnread?'unread':''}" onclick="markAnnouncementRead('${a.id}')">
       <div class="announce-meta">${isUnread?'<div class="announce-new-dot"></div>':''}<span>${author}</span><span>·</span><span>${dateStr}</span></div>
       <div class="announce-title">${a.title}</div>
       <div class="announce-body">${a.content}</div>
+      ${attachHtml}
       ${editBtns}
     </div>`;
   }).join('');
@@ -2199,8 +2251,39 @@ function openAddAnnouncementModal(){
   document.getElementById('editAnnounceId').value='';
   document.getElementById('announceTitle').value='';
   document.getElementById('announceContent').value='';
+  addAnnouncementFiles=[];
+  document.getElementById('announceFilePreview').innerHTML='';
+  document.getElementById('announceFileInput').value='';
   openModal('addAnnounceOverlay');
 }
+
+function renderAnnouncementFilePreview(){
+  const prev=document.getElementById('announceFilePreview');
+  if(!prev)return;
+  prev.innerHTML=addAnnouncementFiles.map(f=>`<span class="attach-chip">📎 ${f.name}</span>`).join('');
+}
+
+function handleAnnouncementFile(e){
+  const files=Array.from(e.target.files||[]);
+  files.forEach(file=>{
+    const reader=new FileReader();
+    reader.onload=ev=>{
+      addAnnouncementFiles.push({name:file.name,data:ev.target.result,type:file.type});
+      renderAnnouncementFilePreview();
+    };
+    reader.readAsDataURL(file);
+  });
+  e.target.value='';
+}
+window.handleAnnouncementFile=handleAnnouncementFile;
+
+function clearAnnouncementFiles(){
+  addAnnouncementFiles=[];
+  const fileInput=document.getElementById('announceFileInput');
+  if(fileInput)fileInput.value='';
+  renderAnnouncementFilePreview();
+}
+window.clearAnnouncementFiles=clearAnnouncementFiles;
 
 function editAnnouncement(id){
   const a=announcements.find(x=>x.id===id);
@@ -2209,6 +2292,9 @@ function editAnnouncement(id){
   document.getElementById('editAnnounceId').value=id;
   document.getElementById('announceTitle').value=a.title;
   document.getElementById('announceContent').value=a.content;
+  addAnnouncementFiles=Array.isArray(a.attachments)?[...a.attachments]:[];
+  document.getElementById('announceFileInput').value='';
+  renderAnnouncementFilePreview();
   openModal('addAnnounceOverlay');
 }
 window.editAnnouncement=editAnnouncement;
@@ -2226,15 +2312,20 @@ async function saveAnnouncement(){
   const title=document.getElementById('announceTitle').value.trim();
   const content=document.getElementById('announceContent').value.trim();
   if(!title||!content)return alert('Bitte Titel und Inhalt ausfüllen.');
+  const totalSize=addAnnouncementFiles.reduce((s,f)=>s+(f?.data?.length||0),0);
+  if(totalSize>800000)return alert('Anhänge zu groß (max. ~600KB gesamt). Bitte kleinere Dateien wählen.');
   const editId=document.getElementById('editAnnounceId').value;
   if(editId){
     const a=announcements.find(x=>x.id===editId);
-    if(a){a.title=title;a.content=content;}
+    if(a){a.title=title;a.content=content;a.attachments=[...addAnnouncementFiles];}
   } else {
-    announcements.push({id:uid(),title,content,ts:Date.now(),createdBy:currentUser.email,authorName:currentUser.name});
+    announcements.push({id:uid(),title,content,attachments:[...addAnnouncementFiles],ts:Date.now(),createdBy:currentUser.email,authorName:currentUser.name});
   }
   await saveData();
   closeModal('addAnnounceOverlay');
+  addAnnouncementFiles=[];
+  document.getElementById('announceFilePreview').innerHTML='';
+  document.getElementById('announceFileInput').value='';
   renderAnnouncements();renderHome();
 }
 window.saveAnnouncement=saveAnnouncement;
@@ -2308,118 +2399,193 @@ async function saveFlashcard(){
 }
 window.saveFlashcard=saveFlashcard;
 
+function showItemFormError(prefix,message){
+  const el=document.getElementById(`${prefix}ItemError`);
+  if(!el)return alert(message);
+  el.textContent=message;
+  el.style.display='block';
+}
+
+function clearItemFormError(prefix){
+  const el=document.getElementById(`${prefix}ItemError`);
+  if(!el)return;
+  el.textContent='';
+  el.style.display='none';
+}
+
 // ── SUBJECT DROPDOWN (from Untis) ─────────────────
+const HOMEWORK_TYPES=['Hausaufgabe','KE'];
+const TEST_TYPES=['Test','Arbeit','Klausurersatzleistung','Nachschreibtermin'];
+const EXCLUDED_SUBJECTS=['chor','orchester'];
+
+function normalizeSubject(subject=''){
+  return subject.trim().replace(/\s+/g,' ').toLowerCase();
+}
+
+function isUntisSubjectVisible(subject=''){
+  const normalized=normalizeSubject(subject);
+  return Boolean(normalized) && !EXCLUDED_SUBJECTS.some(excluded=>normalized.includes(excluded));
+}
+
+function getAllTimetableSources(){
+  const sources=[];
+  if(ttData)sources.push(ttData);
+  Object.values(timetables||{}).forEach(tt=>{ if(tt) sources.push(tt); });
+  Object.values(ttCache||{}).forEach(tt=>{ if(tt) sources.push(tt); });
+  return sources;
+}
+
 function getUntisSubjects(){
   const subjects=new Set();
-  const exclude=['Chor','Orchester','chor','orchester'];
-  // Gather from all cached timetable data
-  for(const weekKey of Object.keys(timetables)){
-    const tt=timetables[weekKey];
-    if(!tt?.days)continue;
-    for(const day of tt.days){
-      if(!day)continue;
+  const collectFromDays=(days)=>{
+    if(!Array.isArray(days))return;
+    for(const day of days){
+      if(!Array.isArray(day))continue;
       for(const lesson of day){
-        if(lesson.subject && !exclude.some(ex=>lesson.subject.toLowerCase().includes(ex.toLowerCase()))){
+        if(!lesson||typeof lesson!=='object')continue;
+        if(isUntisSubjectVisible(lesson.subject)){
           subjects.add(lesson.subject);
         }
       }
     }
-  }
-  // Also from ttCache
-  for(const ck of Object.keys(ttCache)){
-    const tt=ttCache[ck];
-    if(!tt?.days)continue;
-    for(const day of tt.days){
-      if(!day)continue;
-      for(const lesson of day){
-        if(lesson.subject && !exclude.some(ex=>lesson.subject.toLowerCase().includes(ex.toLowerCase()))){
-          subjects.add(lesson.subject);
-        }
-      }
-    }
-  }
+  };
+  getAllTimetableSources().forEach(tt=>collectFromDays(tt?.days));
   return [...subjects].sort();
 }
 
-function populateSubjectDropdown(sel){
+function populateSubjectDropdown(sel,selectedSubject='',includeGeneral=false){
   const subjects=getUntisSubjects();
   const current=sel.value;
-  sel.innerHTML='<option value="">Fach wählen…</option>'+subjects.map(s=>`<option value="${s}">${s}</option>`).join('');
-  // Add "Allgemein" option as fallback
-  sel.innerHTML+='<option value="Allgemein">Allgemein</option>';
-  if(current)sel.value=current;
+  const options=[...subjects];
+  if(selectedSubject && !options.includes(selectedSubject))options.push(selectedSubject);
+  options.sort((a,b)=>a.localeCompare(b,'de'));
+  sel.innerHTML='<option value="">Fach wählen…</option>'+options.map(s=>`<option value="${s}">${s}</option>`).join('');
+  if(includeGeneral && !options.includes('Allgemein'))sel.innerHTML+='<option value="Allgemein">Allgemein</option>';
+  if(selectedSubject)sel.value=selectedSubject;
+  else if(current)sel.value=current;
 }
 
 // ── SUBJECT DATE VALIDATION ───────────────────────
+function getDayIndex(dateStr){
+  const date=parseDateKey(dateStr);
+  if(!date)return -1;
+  const jsDay=date.getDay();
+  return jsDay>=1&&jsDay<=5 ? jsDay-1 : -1;
+}
+
+function getWeekMonday(dateStr){
+  const date=parseDateKey(dateStr);
+  if(!date)return '';
+  const jsDay=date.getDay();
+  const diff=jsDay===0 ? -6 : 1-jsDay;
+  const monday=new Date(date);
+  monday.setDate(date.getDate()+diff);
+  return toDateKey(monday);
+}
+
+function getTimetableForDate(dateStr){
+  const mondayKey=getWeekMonday(dateStr);
+  if(!mondayKey)return null;
+  return getAllTimetableSources().find(tt=>tt?.week?.monday===mondayKey) || null;
+}
+
 function getSubjectsOnDate(dateStr){
-  if(!dateStr)return[];
-  const d=new Date(dateStr);
-  const dayIdx=d.getDay()-1; // 0=Mon..4=Fri
-  if(dayIdx<0||dayIdx>4)return[];
+  const dayIdx=getDayIndex(dateStr);
+  if(dayIdx<0){
+    return { subjects: [], hasTimetable: true, isSchoolDay: false };
+  }
+  const timetable=getTimetableForDate(dateStr);
+  if(!timetable){
+    return { subjects: [], hasTimetable: false, isSchoolDay: true };
+  }
   const subjects=new Set();
-  // Check all timetable weeks for this specific date
-  for(const weekKey of Object.keys(timetables)){
-    const tt=timetables[weekKey];
-    if(!tt?.days?.[dayIdx])continue;
-    // Check if date falls in this week
-    const mon=new Date(tt.week?.monday);
-    const fri=new Date(tt.week?.friday);
-    if(d>=mon&&d<=fri){
-      for(const lesson of tt.days[dayIdx]){
-        if(lesson.subject)subjects.add(lesson.subject);
-      }
-    }
-  }
-  // Also check ttCache
-  for(const ck of Object.keys(ttCache)){
-    const tt=ttCache[ck];
-    if(!tt?.days?.[dayIdx])continue;
-    const mon=new Date(tt.week?.monday);
-    const fri=new Date(tt.week?.friday);
-    if(d>=mon&&d<=fri){
-      for(const lesson of tt.days[dayIdx]){
-        if(lesson.subject)subjects.add(lesson.subject);
-      }
-    }
-  }
-  // If no exact week match, fall back to any week's day
-  if(subjects.size===0){
-    for(const weekKey of Object.keys(timetables)){
-      const tt=timetables[weekKey];
-      if(!tt?.days?.[dayIdx])continue;
-      for(const lesson of tt.days[dayIdx]){
-        if(lesson.subject)subjects.add(lesson.subject);
-      }
-    }
-    for(const ck of Object.keys(ttCache)){
-      const tt=ttCache[ck];
-      if(!tt?.days?.[dayIdx])continue;
-      for(const lesson of tt.days[dayIdx]){
-        if(lesson.subject)subjects.add(lesson.subject);
-      }
-    }
-  }
-  return[...subjects];
+  (timetable.days?.[dayIdx]||[]).forEach(lesson=>{
+    if(isUntisSubjectVisible(lesson?.subject))subjects.add(lesson.subject);
+  });
+  return { subjects:[...subjects], hasTimetable:true, isSchoolDay:true };
 }
 
 function validateSubjectOnDate(subject, dateStr){
-  const subjects=getSubjectsOnDate(dateStr);
-  if(subjects.length===0)return true; // No data, allow
-  return subjects.some(s=>s.toLowerCase()===subject.toLowerCase());
+  if(!subject){
+    return { valid:false, message:'Bitte ein Fach aus Untis wählen.' };
+  }
+  if(subject==='Allgemein'){
+    return { valid:true, message:'' };
+  }
+  const availability=getSubjectsOnDate(dateStr);
+  if(!availability.isSchoolDay){
+    return { valid:false, message:'Für Wochenenden können keine Fächer eingetragen werden.' };
+  }
+  if(!availability.hasTimetable){
+    return { valid:false, message:'Für dieses Datum sind noch keine Untis-Daten geladen.' };
+  }
+  if(availability.subjects.length===0){
+    return { valid:false, message:'An diesem Tag gibt es laut Untis keinen Unterricht.' };
+  }
+  const isValid=availability.subjects.some(entry=>normalizeSubject(entry)===normalizeSubject(subject));
+  if(!isValid){
+    return { valid:false, message:`${subject} gibt es laut Untis an diesem Tag nicht.` };
+  }
+  return { valid:true, message:'' };
 }
 
 // ── TIMETABLE INDICATOR POPUP ─────────────────────
-function showTTIndicator(subject, date){
-  const today=new Date();today.setHours(0,0,0,0);
-  const hw=homework.filter(h=>!h.done&&h.subject&&h.subject.toLowerCase()===subject.toLowerCase()&&new Date(h.date)>=today);
+function getItemsForSubjectDate(subject,date,kind='all'){
+  return homework.filter(item=>{
+    if(item.done||item.date!==date)return false;
+    if(normalizeSubject(item.subject)!==normalizeSubject(subject))return false;
+    if(kind==='tests')return TEST_TYPES.includes(item.type);
+    if(kind==='homework')return HOMEWORK_TYPES.includes(item.type);
+    return true;
+  });
+}
+
+function buildLessonIndicators(subject,date){
+  if(!subject||!date)return '';
+  const homeworkItems=getItemsForSubjectDate(subject,date,'homework');
+  const testItems=getItemsForSubjectDate(subject,date,'tests');
+  if(!homeworkItems.length&&!testItems.length)return '';
+  const subjectKey=encodeURIComponent(subject);
+  const parts=[];
+  if(homeworkItems.length){
+    parts.push(`<button class="lesson-indicator hw-indicator" title="Hausaufgaben anzeigen" onclick="event.stopPropagation();showTTIndicator('${subjectKey}','${date}','homework')"></button>`);
+  }
+  if(testItems.length){
+    parts.push(`<button class="lesson-indicator test-indicator" title="Tests anzeigen" onclick="event.stopPropagation();showTTIndicator('${subjectKey}','${date}','tests')"></button>`);
+  }
+  return `<div class="lesson-indicators">${parts.join('')}</div>`;
+}
+
+function escapeHtml(value=''){
+  return String(value)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#39;');
+}
+
+function showTTIndicator(subjectKey, date, kind='all'){
+  const subject=decodeURIComponent(subjectKey);
+  const items=getItemsForSubjectDate(subject,date,kind).sort((a,b)=>a.type.localeCompare(b.type,'de')||a.desc.localeCompare(b.desc,'de'));
   const el=document.getElementById('ttIndicatorContent');
-  document.getElementById('ttIndicatorTitle').textContent='📍 '+subject;
-  if(hw.length===0){el.innerHTML='<div class="empty-state">Keine Einträge für dieses Fach</div>';}
+  const dateLabel=parseDateKey(date)?.toLocaleDateString('de-DE',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'})||date;
+  const prefix=kind==='tests'?'🔴 Tests':'🟡 Hausaufgaben';
+  document.getElementById('ttIndicatorTitle').textContent=`${prefix} · ${subject} · ${dateLabel}`;
+  if(items.length===0){el.innerHTML='<div class="empty-state">Keine Einträge für dieses Fach an diesem Tag</div>';}
   else{
-    el.innerHTML=hw.map(h=>{
-      const isTest=['Test','Arbeit','Klausurersatzleistung','Nachschreibtermin'].includes(h.type);
-      const dateStr=new Date(h.date).toLocaleDateString('de-DE');
-      return `<div style="padding:10px 0;border-bottom:1px solid var(--border);"><div style="font-weight:600;font-size:0.9rem;">${isTest?'🔴 ':'🟡 '}${h.type||'Hausaufgabe'}: ${h.subject}</div><div style="font-size:0.82rem;color:var(--text-secondary);margin-top:4px;">${h.desc.slice(0,100)}</div><div style="font-size:0.75rem;color:var(--text-muted);margin-top:4px;">📅 ${dateStr}</div></div>`;
+    el.innerHTML=items.map(item=>{
+      const isTest=TEST_TYPES.includes(item.type);
+      const attachHtml=(item.attachments||[]).length?`<div class="attach-group">${item.attachments.map(att=>renderAttach(att)).join('')}</div>`:'';
+      return `<div style="padding:12px 0;border-bottom:1px solid var(--border);">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+          <div style="font-weight:700;font-size:0.92rem;">${isTest?'🔴':'🟡'} ${escapeHtml(item.type||'Hausaufgabe')}</div>
+          <span class="badge ${isTest?'badge-danger':'badge-warning'}">${escapeHtml(item.subject||subject)}</span>
+        </div>
+        <div style="font-size:0.84rem;color:var(--text-secondary);margin-top:8px;line-height:1.6;white-space:pre-wrap;">${escapeHtml(item.desc||'')}</div>
+        <div style="font-size:0.75rem;color:var(--text-muted);margin-top:8px;">📅 ${dateLabel}</div>
+        ${attachHtml}
+      </div>`;
     }).join('');
   }
   openModal('ttIndicatorOverlay');
