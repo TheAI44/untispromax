@@ -1243,11 +1243,11 @@ function renderHome() {
   const upcoming=homework.filter(h=>!h.done&&['Hausaufgabe','KE'].includes(h.type)&&new Date(h.date)>=today&&new Date(h.date)<=week);
   const hwEl=document.getElementById('homeHwList');
   if(hwEl)hwEl.innerHTML=upcoming.length===0?`<div class="empty-state">Keine Hausaufgaben diese Woche 🎉</div>`:
-    upcoming.map(h=>{const d=dl(h.date);return `<div class="card ${d<=1?'urgent':d<=3?'warning':''}" onclick="goTo('homework')"><div class="card-row"><div><div class="card-title">${h.subject}</div><div class="card-sub">${h.desc.slice(0,50)}</div></div><span class="badge badge-${d<=1?'danger':d<=3?'warning':'accent'}">${d===0?'Heute':d===1?'Morgen':'in '+d+'d'}</span></div></div>`;}).join('');
+    upcoming.map(h=>{const d=dl(h.date);return `<div class="card ${d<=1?'urgent':d<=3?'warning':''}" onclick="goTo('homework')"><div class="card-row"><div><div class="card-title">${toCanonicalSubject(h.subject)}</div><div class="card-sub">${h.desc.slice(0,50)}</div></div><span class="badge badge-${d<=1?'danger':d<=3?'warning':'accent'}">${d===0?'Heute':d===1?'Morgen':'in '+d+'d'}</span></div></div>`;}).join('');
   const tests=homework.filter(h=>!h.done&&['Test','Arbeit','Klausurersatzleistung','Nachschreibtermin'].includes(h.type)&&new Date(h.date)>=today&&new Date(h.date)<=week);
   const testEl=document.getElementById('homeTestList');
   if(testEl)testEl.innerHTML=tests.length===0?`<div class="empty-state">Keine Tests diese Woche ✅</div>`:
-    tests.map(h=>{const d=dl(h.date);return `<div class="card ${d<=1?'urgent':'warning'}" onclick="goTo('tests')"><div class="card-row"><div><div class="card-title">${h.type}: ${h.subject}</div><div class="card-sub">${h.desc.slice(0,50)}</div></div><span class="badge badge-${d<=1?'danger':'warning'}">${d===0?'Heute!':'in '+d+'d'}</span></div></div>`;}).join('');
+    tests.map(h=>{const d=dl(h.date);return `<div class="card ${d<=1?'urgent':'warning'}" onclick="goTo('tests')"><div class="card-row"><div><div class="card-title">${h.type}: ${toCanonicalSubject(h.subject)}</div><div class="card-sub">${h.desc.slice(0,50)}</div></div><span class="badge badge-${d<=1?'danger':'warning'}">${d===0?'Heute!':'in '+d+'d'}</span></div></div>`;}).join('');
   const evts=events.filter(e=>new Date(e.date)>=today&&new Date(e.date)<=week);
   const evEl=document.getElementById('homeEventList');
   if(evEl)evEl.innerHTML=evts.length===0?`<div class="empty-state">Keine Ereignisse diese Woche</div>`:
@@ -1481,7 +1481,7 @@ function renderSlotLessons(lessons, showTime, dateKey=''){
       <div class="lesson-subjects" style="flex:1;">
         <div class="lesson-item ${cls}">
           <div class="lesson-item-main">
-            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">${tag}<span class="lesson-subject">${l.subject}</span></div>
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">${tag}<span class="lesson-subject">${toCanonicalSubject(l.subject)}</span></div>
             <div class="lesson-room">${expandTeacherName(l.teacher)} · ${l.room}${l.note?' · '+l.note:''}</div>
           </div>
           ${indicators}
@@ -1834,7 +1834,7 @@ function buildHWCard(h,kind){
     <div class="hw-top">
       <div class="hw-check${h.done?' checked':''}" onclick="toggleDone('${h.id}');event.stopPropagation()"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
       <div class="hw-info">
-        <div class="card-row"><div class="hw-title">${h.subject}</div><span class="badge ${badge}">${dlText}</span></div>
+        <div class="card-row"><div class="hw-title">${toCanonicalSubject(h.subject)}</div><span class="badge ${badge}">${dlText}</span></div>
         <div class="hw-meta"><span style="font-size:0.78rem;color:var(--text-muted);">bis ${new Date(h.date).toLocaleDateString('de-DE')}</span></div>
       </div>
     </div>
@@ -1874,7 +1874,7 @@ function renderTests(){
       <div class="hw-top">
         <div class="hw-check${h.done?' checked':''}" onclick="toggleDone('${h.id}');event.stopPropagation()"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
         <div class="hw-info">
-          <div class="card-row"><div class="hw-title">${h.subject}</div><span class="badge ${badge}">${dlText}</span></div>
+          <div class="card-row"><div class="hw-title">${toCanonicalSubject(h.subject)}</div><span class="badge ${badge}">${dlText}</span></div>
           <div class="hw-meta"><span class="badge badge-danger">${h.type}</span><span style="font-size:0.78rem;color:var(--text-muted);">${new Date(h.date).toLocaleDateString('de-DE')}</span></div>
         </div>
       </div>
@@ -2009,7 +2009,7 @@ async function saveNewItem(){
     const evDesc=document.getElementById('addEventDesc').value.trim();
     events.push({id:uid(),title:desc,desc:evDesc||desc,date,dateEnd:dateEnd||undefined,createdBy:currentUser.email,attachments:[...addItemFiles]});
   } else {
-    homework.push({id:uid(),type,subject:subj||'Allgemein',desc,date,done:false,createdBy:currentUser.email,attachments:[...addItemFiles]});
+    homework.push({id:uid(),type,subject:toCanonicalSubject(subj)||'Allgemein',desc,date,done:false,createdBy:currentUser.email,attachments:[...addItemFiles]});
   }
   await saveData();
   closeModal('addItemOverlay');
@@ -2156,8 +2156,8 @@ function openEditItem(id, kind){
     ts.innerHTML='<option value="Allgemein">Allgemein</option>';
     ts.closest('.form-group').style.display='none';
     const es=document.getElementById('editItemSubject');
-    populateSubjectDropdown(es,item.subject||'',true);
-    es.value=item.subject||'';
+    populateSubjectDropdown(es,toCanonicalSubject(item.subject||''),true);
+    es.value=toCanonicalSubject(item.subject||'');
     document.getElementById('editItemDateEndGroup').style.display='none';
   } else {
     document.getElementById('editItemDesc').value=item.desc||'';
@@ -2167,8 +2167,8 @@ function openEditItem(id, kind){
     if(kind==='hw'){ts.innerHTML='<option value="Hausaufgabe">Hausaufgabe</option>';ts.value=item.type||'Hausaufgabe';tg.style.display='none';}
     else if(kind==='test'){ts.innerHTML='<option value="Test">Test</option><option value="Arbeit">Arbeit</option><option value="Klausurersatzleistung">Klausurersatzleistung</option><option value="Nachschreibtermin">Nachschreibtermin</option>';ts.value=item.type||'';tg.style.display='';}
     const es=document.getElementById('editItemSubject');
-    populateSubjectDropdown(es,item.subject||'',item.subject==='Allgemein');
-    es.value=item.subject||'';
+    populateSubjectDropdown(es,toCanonicalSubject(item.subject||''),item.subject==='Allgemein');
+    es.value=toCanonicalSubject(item.subject||'');
     document.getElementById('editItemDateEndGroup').style.display='none';
   }
   document.getElementById('editItemDate').value=item.date||item._dateKey||'';
@@ -2201,7 +2201,7 @@ async function saveEditItem(){
       const validation=validateSubjectOnDate(subject,date);
       if(!validation.valid)return showItemFormError('edit',validation.message);
       hw.desc=desc; hw.date=date;
-      hw.subject=subject;
+      hw.subject=toCanonicalSubject(subject);
       hw.type=document.getElementById('editItemType').value;
     }
   } else if(kind==='recovery'){
@@ -2416,14 +2416,51 @@ function clearItemFormError(prefix){
 // ── SUBJECT DROPDOWN (from Untis) ─────────────────
 const HOMEWORK_TYPES=['Hausaufgabe','KE'];
 const TEST_TYPES=['Test','Arbeit','Klausurersatzleistung','Nachschreibtermin'];
-const EXCLUDED_SUBJECTS=['chor','orchester'];
+const EXCLUDED_SUBJECTS=['chor','orchester','orchestar','orchestra'];
+const UNTIS_SUBJECT_MAP={
+  ma:'Mathe',
+  frz:'Französisch',
+  geo:'Geography',
+  en:'Englisch',
+  phy:'Physik',
+  ges:'Geschichte',
+  ku:'Kunst',
+  thea:'Theater',
+  mus:'Musik',
+  kr:'Klassenrat',
+  phil:'Philosophy',
+  rel:'Religion',
+  pgw:'PGW',
+  de:'Deutsch',
+  ch:'Chemie',
+  spo:'Sport',
+  inf:'Informatik'
+};
+
+const UNTIS_SUBJECT_NAME_INDEX=(()=>{
+  const index={};
+  Object.entries(UNTIS_SUBJECT_MAP).forEach(([shortName,fullName])=>{
+    index[normalizeSubject(shortName)]=fullName;
+    index[normalizeSubject(fullName)]=fullName;
+  });
+  return index;
+})();
 
 function normalizeSubject(subject=''){
   return subject.trim().replace(/\s+/g,' ').toLowerCase();
 }
 
-function isUntisSubjectVisible(subject=''){
+function toCanonicalSubject(subject=''){
   const normalized=normalizeSubject(subject);
+  return UNTIS_SUBJECT_NAME_INDEX[normalized] || subject.trim();
+}
+
+function normalizeSubjectForCompare(subject=''){
+  return normalizeSubject(toCanonicalSubject(subject));
+}
+
+function isUntisSubjectVisible(subject=''){
+  const normalized=normalizeSubjectForCompare(subject);
   return Boolean(normalized) && !EXCLUDED_SUBJECTS.some(excluded=>normalized.includes(excluded));
 }
 
@@ -2444,12 +2481,15 @@ function getUntisSubjects(){
       for(const lesson of day){
         if(!lesson||typeof lesson!=='object')continue;
         if(isUntisSubjectVisible(lesson.subject)){
-          subjects.add(lesson.subject);
+          subjects.add(toCanonicalSubject(lesson.subject));
         }
       }
     }
   };
   getAllTimetableSources().forEach(tt=>collectFromDays(tt?.days));
+  Object.values(UNTIS_SUBJECT_MAP).forEach(fullName=>{
+    if(isUntisSubjectVisible(fullName))subjects.add(fullName);
+  });
   return [...subjects].sort();
 }
 
@@ -2500,7 +2540,7 @@ function getSubjectsOnDate(dateStr){
   }
   const subjects=new Set();
   (timetable.days?.[dayIdx]||[]).forEach(lesson=>{
-    if(isUntisSubjectVisible(lesson?.subject))subjects.add(lesson.subject);
+    if(isUntisSubjectVisible(lesson?.subject))subjects.add(toCanonicalSubject(lesson.subject));
   });
   return { subjects:[...subjects], hasTimetable:true, isSchoolDay:true };
 }
@@ -2512,20 +2552,31 @@ function validateSubjectOnDate(subject, dateStr){
   if(subject==='Allgemein'){
     return { valid:true, message:'' };
   }
-  const availability=getSubjectsOnDate(dateStr);
-  if(!availability.isSchoolDay){
+  
+  // Check if it's a weekend
+  const dayIdx=getDayIndex(dateStr);
+  if(dayIdx<0){
     return { valid:false, message:'Für Wochenenden können keine Fächer eingetragen werden.' };
   }
-  if(!availability.hasTimetable){
-    return { valid:false, message:'Für dieses Datum sind noch keine Untis-Daten geladen.' };
+  
+  // Check if subject is in our known subjects list
+  const knownSubjects=getUntisSubjects();
+  const isKnown=knownSubjects.some(s=>normalizeSubjectForCompare(s)===normalizeSubjectForCompare(subject));
+  if(!isKnown){
+    return { valid:false, message:`${toCanonicalSubject(subject)} ist nicht in der Untis-Fächerliste.` };
   }
-  if(availability.subjects.length===0){
-    return { valid:false, message:'An diesem Tag gibt es laut Untis keinen Unterricht.' };
+  
+  // If we have timetable data for this specific date, check if subject is actually on that day
+  const timetable=getTimetableForDate(dateStr);
+  if(timetable){
+    const availability=getSubjectsOnDate(dateStr);
+    const isOnDay=availability.subjects.some(entry=>normalizeSubjectForCompare(entry)===normalizeSubjectForCompare(subject));
+    if(!isOnDay && availability.subjects.length>0){
+      // Only reject if we have subjects on that day but this one is not in the list
+      return { valid:false, message:`${toCanonicalSubject(subject)} gibt es laut Untis an diesem Tag nicht.` };
+    }
   }
-  const isValid=availability.subjects.some(entry=>normalizeSubject(entry)===normalizeSubject(subject));
-  if(!isValid){
-    return { valid:false, message:`${subject} gibt es laut Untis an diesem Tag nicht.` };
-  }
+  // If we don't have timetable data or subject is known, allow it (it's a weekday and subject is known)
   return { valid:true, message:'' };
 }
 
@@ -2533,7 +2584,7 @@ function validateSubjectOnDate(subject, dateStr){
 function getItemsForSubjectDate(subject,date,kind='all'){
   return homework.filter(item=>{
     if(item.done||item.date!==date)return false;
-    if(normalizeSubject(item.subject)!==normalizeSubject(subject))return false;
+    if(normalizeSubjectForCompare(item.subject)!==normalizeSubjectForCompare(subject))return false;
     if(kind==='tests')return TEST_TYPES.includes(item.type);
     if(kind==='homework')return HOMEWORK_TYPES.includes(item.type);
     return true;
@@ -2566,7 +2617,7 @@ function escapeHtml(value=''){
 }
 
 function showTTIndicator(subjectKey, date, kind='all'){
-  const subject=decodeURIComponent(subjectKey);
+  const subject=toCanonicalSubject(decodeURIComponent(subjectKey));
   const items=getItemsForSubjectDate(subject,date,kind).sort((a,b)=>a.type.localeCompare(b.type,'de')||a.desc.localeCompare(b.desc,'de'));
   const el=document.getElementById('ttIndicatorContent');
   const dateLabel=parseDateKey(date)?.toLocaleDateString('de-DE',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'})||date;
@@ -2580,7 +2631,7 @@ function showTTIndicator(subjectKey, date, kind='all'){
       return `<div style="padding:12px 0;border-bottom:1px solid var(--border);">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
           <div style="font-weight:700;font-size:0.92rem;">${isTest?'🔴':'🟡'} ${escapeHtml(item.type||'Hausaufgabe')}</div>
-          <span class="badge ${isTest?'badge-danger':'badge-warning'}">${escapeHtml(item.subject||subject)}</span>
+          <span class="badge ${isTest?'badge-danger':'badge-warning'}">${escapeHtml(toCanonicalSubject(item.subject||subject))}</span>
         </div>
         <div style="font-size:0.84rem;color:var(--text-secondary);margin-top:8px;line-height:1.6;white-space:pre-wrap;">${escapeHtml(item.desc||'')}</div>
         <div style="font-size:0.75rem;color:var(--text-muted);margin-top:8px;">📅 ${dateLabel}</div>
