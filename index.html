@@ -194,6 +194,8 @@
   .attach-list { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px; }
   .attach-chip { display: flex; align-items: center; gap: 6px; padding: 5px 10px; background: rgba(0,180,255,0.08); border: 1px solid var(--border); border-radius: 20px; font-size: 0.78rem; color: var(--accent); cursor: pointer; text-decoration: none; }
   .attach-chip:hover { background: rgba(0,180,255,0.15); }
+  .delete-attach { background: transparent; border: none; color: #ff4444; cursor: pointer; font-size: 1rem; padding: 0 2px; margin-left: 4px; }
+  .delete-attach:hover { color: #ff0000; font-weight: bold; }
   .attach-img-preview { max-width: 100%; max-height: 200px; border-radius: 8px; margin-top: 6px; cursor: pointer; border: 1px solid var(--border); display: block; }
   .attach-pdf-frame { width: 100%; height: 300px; border-radius: 8px; border: 1px solid var(--border); margin-top: 6px; }
   .attach-group { margin-top: 8px; }
@@ -1973,16 +1975,26 @@ window.setNextWeek=setNextWeek;
 
 function handleAddFile(e){
   const files=Array.from(e.target.files);
-  const prev=document.getElementById('addFilePreview');
   files.forEach(file=>{
     const reader=new FileReader();
     reader.onload=ev=>{
       addItemFiles.push({name:file.name,data:ev.target.result,type:file.type});
-      prev.innerHTML=addItemFiles.map(f=>`<span class="attach-chip">📎 ${f.name}</span>`).join('');
+      renderAddItemAttachments();
     };
     reader.readAsDataURL(file);
   });
 }
+
+function renderAddItemAttachments(){
+  const prev=document.getElementById('addFilePreview');
+  prev.innerHTML=addItemFiles.map((f,idx)=>`<span class="attach-chip">📎 ${f.name} <button type="button" class="delete-attach" onclick="deleteAddItemAttachment(${idx})" title="Löschen">✕</button></span>`).join('');
+}
+
+function deleteAddItemAttachment(idx){
+  addItemFiles.splice(idx,1);
+  renderAddItemAttachments();
+}
+
 window.handleAddFile=handleAddFile;
 
 async function saveNewItem(){
@@ -2559,24 +2571,16 @@ function validateSubjectOnDate(subject, dateStr){
     return { valid:false, message:'Für Wochenenden können keine Fächer eingetragen werden.' };
   }
   
-  // Check if subject is in our known subjects list
+  // Check if subject is in our known subjects list (from CSV + timetable data)
   const knownSubjects=getUntisSubjects();
   const isKnown=knownSubjects.some(s=>normalizeSubjectForCompare(s)===normalizeSubjectForCompare(subject));
   if(!isKnown){
     return { valid:false, message:`${toCanonicalSubject(subject)} ist nicht in der Untis-Fächerliste.` };
   }
   
-  // If we have timetable data for this specific date, check if subject is actually on that day
-  const timetable=getTimetableForDate(dateStr);
-  if(timetable){
-    const availability=getSubjectsOnDate(dateStr);
-    const isOnDay=availability.subjects.some(entry=>normalizeSubjectForCompare(entry)===normalizeSubjectForCompare(subject));
-    if(!isOnDay && availability.subjects.length>0){
-      // Only reject if we have subjects on that day but this one is not in the list
-      return { valid:false, message:`${toCanonicalSubject(subject)} gibt es laut Untis an diesem Tag nicht.` };
-    }
-  }
-  // If we don't have timetable data or subject is known, allow it (it's a weekday and subject is known)
+  // If it's a weekday and the subject is known, allow it
+  // We trust the known subjects list (CSV + cached data) as the source of truth
+  // Only check timetable to warn about ENTFALL, not to restrict
   return { valid:true, message:'' };
 }
 
