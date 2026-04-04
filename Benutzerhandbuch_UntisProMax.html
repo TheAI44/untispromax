@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Benutzerhandbuch UntisProMax</title>
+  <style>
+    :root {
+      --text: #1a1a1a;
+      --muted: #5a5a5a;
+      --line: #d9d9d9;
+      --accent: #0b5cab;
+      --accent-soft: #eef4fb;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--text);
+      font-family: "Segoe UI", Arial, sans-serif;
+      line-height: 1.45;
+      background: #fff;
+    }
+    .page {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 28px 34px 40px;
+    }
+    h1, h2, h3 { margin: 0 0 10px; line-height: 1.2; }
+    h1 { font-size: 30px; color: var(--accent); }
+    h2 { font-size: 22px; margin-top: 30px; border-bottom: 1px solid var(--line); padding-bottom: 6px; }
+    h3 { font-size: 18px; margin-top: 20px; }
+    p { margin: 8px 0 10px; }
+    ul { margin: 8px 0 10px 20px; }
+    li { margin: 5px 0; }
+    .meta {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .note {
+      border-left: 4px solid var(--accent);
+      background: var(--accent-soft);
+      padding: 10px 12px;
+      margin: 12px 0;
+    }
+    .toc {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px 16px;
+      background: #fafafa;
+      margin-top: 16px;
+    }
+    .toc h3 { margin-top: 0; }
+    .toc ol { margin: 0 0 0 20px; }
+    .step {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin: 10px 0;
+      background: #fcfcfc;
+    }
+    .step strong { color: var(--accent); }
+    .shot {
+      border: 2px dashed #a9a9a9;
+      border-radius: 8px;
+      min-height: 180px;
+      margin: 12px 0 18px;
+      padding: 12px;
+      background: #f9f9f9;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      color: #4b4b4b;
+    }
+    .shot .title { font-weight: 700; margin-bottom: 6px; }
+    .shot .hint { font-size: 14px; max-width: 620px; }
+    .divider { margin-top: 24px; border-top: 1px solid var(--line); }
+    .small { font-size: 13px; color: var(--muted); }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 10px 0 14px;
+      font-size: 14px;
+    }
+    th, td {
+      border: 1px solid var(--line);
+      padding: 8px 10px;
+      vertical-align: top;
+    }
+    th { background: #f4f7fb; text-align: left; }
+    .footer {
+      margin-top: 22px;
+      padding-top: 10px;
+      border-top: 1px solid var(--line);
+      font-size: 12px;
+      color: var(--muted);
+    }
+    @media print {
+      .page { max-width: none; padding: 14mm 14mm 16mm; }
+      h2, h3 { page-break-after: avoid; }
+      .step, .shot, table { page-break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <h1>Benutzerhandbuch UntisProMax</h1>
+    <p>Dieses Handbuch richtet sich an normale Nutzerinnen und Nutzer (keine Admin-Rechte). Es erklärt alle wichtigen Funktionen in klaren Schritten.</p>
+    <p class="meta">Version: April 2026 · Sprache: Deutsch · Zielgruppe: Regelmäßige Nutzung im Schulalltag</p>
+
+    <div class="note">
+      <strong>Hinweis zu Screenshots:</strong> In diesem Dokument sind Platzhalter enthalten. Füge an diesen Stellen Screenshots aus deiner laufenden Web-App ein.
+    </div>
+
+    <div class="toc">
+      <h3>Inhaltsverzeichnis</h3>
+      <ol>
+        <li>Anmeldung und Start</li>
+        <li>Navigation (untere Menüleiste)</li>
+        <li>Startseite verstehen</li>
+        <li>Stundenplan nutzen</li>
+        <li>Hausaufgaben</li>
+        <li>Tests</li>
+        <li>Ereignisse</li>
+        <li>Krank / Nachholstoff</li>
+        <li>Ankündigungen</li>
+        <li>Flashcards</li>
+        <li>Einstellungen und Profil</li>
+        <li>Fehlerbehebung und Tipps</li>
+      </ol>
+    </div>
+
+    <h2>1. Anmeldung und Start</h2>
+    <p>Nach dem Öffnen der Web-App siehst du den Login-Bereich. Dort meldest du dich mit deiner E-Mail-Adresse und deinem Passwort an.</p>
+    <div class="step"><strong>Schritt 1:</strong> E-Mail und Passwort eingeben.</div>
+    <div class="step"><strong>Schritt 2:</strong> Auf <em>Anmelden</em> klicken.</div>
+    <div class="step"><strong>Schritt 3:</strong> Nach erfolgreichem Login wirst du zur Startseite weitergeleitet.</div>
+    <div class="shot">
+      <div class="title">Screenshot-Platzhalter A: Login-Bereich</div>
+      <div class="hint">Einfügen: Bildschirm mit Feldern „E-Mail-Adresse“, „Passwort“ und Button „Anmelden“.</div>
+    </div>
+
+    <h2>2. Navigation (untere Menüleiste)</h2>
+    <p>Unten in der App ist die wichtigste Navigation:</p>
+    <ul>
+      <li><strong>Start</strong> – Überblick über aktuelle Dinge.</li>
+      <li><strong>Plan</strong> – Stundenplanansicht pro Wochentag.</li>
+      <li><strong>Aufgaben</strong> – Hausaufgabenliste.</li>
+      <li><strong>Tests</strong> – Prüfungen und Testtermine.</li>
+      <li><strong>Mehr</strong> – zusätzliche Seiten (Events, Krank, News, Flashcards).</li>
+    </ul>
+    <p>Der aktive Menüpunkt ist farblich hervorgehoben.</p>
+    <div class="shot">
+      <div class="title">Screenshot-Platzhalter B: Untere Menüleiste</div>
+      <div class="hint">Einfügen: kompletter unterer Navigationsbereich mit allen 5 Buttons.</div>
+    </div>
+
+    <h2>3. Startseite verstehen</h2>
+    <p>Die Startseite ist dein Dashboard. Hier siehst du in kompakten Karten:</p>
+    <ul>
+      <li>Neue Ankündigungen</li>
+      <li>Nächste Abgaben (Hausaufgaben)</li>
+      <li>Kommende Tests</li>
+      <li>Bevorstehende Events</li>
+    </ul>
+    <p>Dringende Einträge sind farblich stärker markiert (z. B. rot/gelb). Ein Klick auf eine Karte führt dich meist direkt zum passenden Bereich.</p>
+    <div class="shot">
+      <div class="title">Screenshot-Platzhalter C: Startseite mit Karten</div>
+      <div class="hint">Einfügen: Startseite mit mindestens einer Karte für Aufgaben und eine für Tests.</div>
+    </div>
+
+    <h2>4. Stundenplan nutzen</h2>
+    <h3>4.1 Wochennavigation</h3>
+    <p>Im Stundenplan kannst du zwischen Wochen wechseln:</p>
+    <ul>
+      <li><strong>Zurück</strong>: vorherige verfügbare Woche</li>
+      <li><strong>Heute</strong>: springt zur aktuellen Woche und zum heutigen Schultag</li>
+      <li><strong>Vor</strong>: nächste verfügbare Woche</li>
+    </ul>
+    <p>Am Wochenende ist <strong>Heute</strong> deaktiviert (ausgegraut), da kein regulärer Schultag vorliegt.</p>
+
+    <h3>4.2 Tages-Tabs</h3>
+    <p>Unter dem Wochenkopf findest du Tabs für Montag bis Freitag. Tippe auf einen Tag, um dessen Stunden zu sehen.</p>
+
+    <h3>4.3 Indikatoren im Stundenplan</h3>
+    <p>Bei Fächern können kleine farbige Kreise mit <strong>!</strong> erscheinen:</p>
+    <table>
+      <thead>
+        <tr><th>Farbe</th><th>Bedeutung</th><th>Aktion</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Gelb + !</td><td>Offene Hausaufgabe für dieses Fach und Datum</td><td>Antippen, um Details zu öffnen</td></tr>
+        <tr><td>Rot + !</td><td>Anstehender Test/Arbeit für dieses Fach und Datum</td><td>Antippen, um Details zu öffnen</td></tr>
+      </tbody>
+    </table>
+    <p>Wenn Aufgaben erledigt werden, aktualisieren sich die Indikatoren direkt.</p>
+    <div class="shot">
+      <div class="title">Screenshot-Platzhalter D: Stundenplan-Tagesansicht</div>
+      <div class="hint">Einfügen: Eine Tagesansicht mit gelbem/rotem !-Indikator am Fach.</div>
+    </div>
+
+    <h2>5. Hausaufgaben</h2>
+    <p>Im Bereich <strong>Aufgaben</strong> findest du alle Hausaufgaben nach Status sortiert:</p>
+    <ul>
+      <li><strong>Anstehend</strong></li>
+      <li><strong>Erledigt</strong></li>
+      <li><strong>Überfällig</strong></li>
+    </ul>
+    <p>Jede Karte zeigt Fach, Fälligkeitsdatum und Beschreibung. Mit dem Haken markierst du eine Aufgabe als erledigt oder wieder offen.</p>
+    <div class="step"><strong>Tipp:</strong> Wenn du eine Aufgabe wieder öffnest (Haken zurück), taucht der Indikator im Stundenplan wieder auf.</div>
+    <div class="shot">
+      <div class="title">Screenshot-Platzhalter E: Hausaufgabenliste</div>
+      <div class="hint">Einfügen: Aufgabenbereich mit mindestens einer offenen und einer erledigten Aufgabe.</div>
+    </div>
+
+    <h2>6. Tests</h2>
+    <p>Im Bereich <strong>Tests</strong> werden Test- und Arbeitstermine angezeigt. Üblicherweise gibt es Filter wie:</p>
+    <ul>
+      <li><strong>Anstehend</strong></li>
+      <li><strong>Vergangen</strong></li>
+    </ul>
+    <p>Prüfungstermine sind wichtiger priorisiert und oft rot markiert. Über denselben Haken kann ein Eintrag als erledigt/abgeschlossen markiert werden.</p>
+    <div class="shot">
+      <div class="title">Screenshot-Platzhalter F: Tests-Bereich</div>
+      <div class="hint">Einfügen: Testsseite mit einem nahen Termin (z. B. „Heute“ oder „in 1d“).</div>
+    </div>
+
+    <h2>7. Ereignisse (Events)</h2>
+    <p>Über <strong>Mehr → Events</strong> siehst du schulische Ereignisse (z. B. Ausflüge, Ferienhinweise, schulfreie Tage).</p>
+    <ul>
+      <li>Events können ein Datum oder einen Zeitraum haben.</li>
+      <li>Vergangene Events bleiben als Historie erhalten.</li>
+    </ul>
+    <div class="shot">
+      <div class="title">Screenshot-Platzhalter G: Events-Liste</div>
+      <div class="hint">Einfügen: Events-Seite mit mindestens einem bevorstehenden Event.</div>
+    </div>
+
+    <h2>8. Krank / Nachholstoff</h2>
+    <p>Über <strong>Mehr → Krank</strong> kannst du Nachholstoff für Fehltage einsehen.</p>
+    <ul>
+      <li>Auswahl eines Datums</li>
+      <li>Einträge pro Fach (was nachzuarbeiten ist)</li>
+      <li>Bei Bedarf mit Anhängen</li>
+    </ul>
+    <p>Dieser Bereich hilft dir, nach Abwesenheit schnell wieder einzusteigen.</p>
+    <div class="shot">
+      <div class="title">Screenshot-Platzhalter H: Krank/Nachholstoff</div>
+      <div class="hint">Einfügen: Datumsansicht mit mindestens einem Nachholstoff-Eintrag.</div>
+    </div>
+
+    <h2>9. Ankündigungen</h2>
+    <p>Über <strong>Mehr → News</strong> öffnest du die Ankündigungen.</p>
+    <ul>
+      <li>Neue Nachrichten werden optisch hervorgehoben.</li>
+      <li>Beim Öffnen/Antippen werden sie als gelesen markiert.</li>
+      <li>Auf der Startseite erscheinen neue Ankündigungen ebenfalls im Überblick.</li>
+    </ul>
+    <div class="shot">
+      <div class="title">Screenshot-Platzhalter I: Ankündigungen</div>
+      <div class="hint">Einfügen: News-Seite mit einer ungelesenen und einer gelesenen Nachricht.</div>
+    </div>
+
+    <h2>10. Flashcards</h2>
+    <p>Über <strong>Mehr → Flashcards</strong> kannst du Lernkarten öffnen.</p>
+    <ul>
+      <li>Karten nach Themen durchgehen</li>
+      <li>Wiederholen vor Tests</li>
+      <li>Schneller Zugriff über die Mehr-Seite</li>
+    </ul>
+    <div class="shot">
+      <div class="title">Screenshot-Platzhalter J: Flashcards</div>
+      <div class="hint">Einfügen: Flashcard-Übersicht oder eine geöffnete Karte.</div>
+    </div>
+
+    <h2>11. Einstellungen und Profil</h2>
+    <p>Über das Zahnrad oben rechts öffnest du die Einstellungen.</p>
+    <ul>
+      <li>Name prüfen/ändern</li>
+      <li>Profilbild setzen</li>
+      <li>Optional Light Mode aktivieren</li>
+      <li>Wünsche/Probleme an Admin senden (falls verfügbar)</li>
+    </ul>
+    <div class="shot">
+      <div class="title">Screenshot-Platzhalter K: Einstellungen</div>
+      <div class="hint">Einfügen: Einstellungsfenster mit Profilbild-Bereich und Light-Mode-Schalter.</div>
+    </div>
+
+    <h2>12. Fehlerbehebung und Tipps</h2>
+    <h3>12.1 Häufige Situationen</h3>
+    <table>
+      <thead>
+        <tr><th>Problem</th><th>Mögliche Ursache</th><th>Lösung</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Eintrag fehlt im Stundenplan</td>
+          <td>Aufgabe/Test bereits als erledigt markiert oder falsches Datum/Fach</td>
+          <td>Status prüfen, Datum/Fach kontrollieren, ggf. Eintrag wieder öffnen.</td>
+        </tr>
+        <tr>
+          <td>Heute-Button ist ausgegraut</td>
+          <td>Wochenende (Samstag/Sonntag)</td>
+          <td>Normal. Nutze Montag-Freitag-Tabs oder warte bis Schultag.</td>
+        </tr>
+        <tr>
+          <td>Menü reagiert verzögert</td>
+          <td>Temporäre Browser-Last/Verbindung</td>
+          <td>Einmal kurz warten, dann erneut tippen. Bei Bedarf Browser neu laden.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>12.2 Gute Nutzung im Alltag</h3>
+    <ul>
+      <li>Markiere Aufgaben direkt nach dem Erledigen.</li>
+      <li>Kontrolliere morgens die Startseite und den Stundenplan.</li>
+      <li>Nutze Flashcards regelmäßig in kurzen Lernblöcken.</li>
+      <li>Melde Probleme über die Wunsch-/Problemfunktion.</li>
+    </ul>
+
+    <div class="divider"></div>
+    <p class="small"><strong>Hinweis:</strong> Dieses Handbuch beschreibt die reguläre Nutzung. Je nach Rechte-Rolle können einzelne Funktionen (z. B. Erstellen/Bearbeiten/Löschen) abweichen.</p>
+
+    <div class="footer">
+      UntisProMax Benutzerhandbuch · Erstellt für Regelnutzer · April 2026
+    </div>
+  </main>
+</body>
+</html>
