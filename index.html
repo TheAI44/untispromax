@@ -144,7 +144,7 @@
   .tt-week-dates { font-size: 0.75rem; color: var(--text-muted); margin-top: 2px; }
   .tt-week-nav { display: flex; gap: 8px; }
   .tt-nav-btn { background: var(--bg-card2); border: 1px solid var(--border); border-radius: 8px; color: var(--accent); font-family: inherit; font-size: 0.8rem; padding: 6px 12px; cursor: pointer; transition: all 0.2s; }
-  .tt-nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  .tt-nav-btn:disabled { opacity: 0.45; cursor: not-allowed; color: var(--text-muted); border-color: var(--border); background: rgba(255,255,255,0.03); }
   .tt-nav-btn:hover { border-color: var(--accent); }
   .day-tabs { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 12px; }
   .day-tab { flex-shrink: 0; padding: 8px 14px; border-radius: 20px; border: 1px solid var(--border); background: transparent; color: var(--text-secondary); font-family: inherit; font-size: 0.82rem; font-weight: 600; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
@@ -167,7 +167,7 @@
   .tag-sub { font-size: 0.68rem; padding: 2px 8px; border-radius: 10px; background: rgba(255,179,0,0.12); color: var(--warning); font-weight: 700; }
   .tag-cancel { font-size: 0.68rem; padding: 2px 8px; border-radius: 10px; background: rgba(255,64,96,0.1); color: var(--danger); font-weight: 700; }
   .lesson-indicators { display: flex; gap: 6px; flex-shrink: 0; margin-top: 1px; }
-  .lesson-indicator { width: 16px; height: 16px; border: none; border-radius: 50%; cursor: pointer; box-shadow: 0 0 0 1px rgba(255,255,255,0.18) inset; }
+  .lesson-indicator { width: 16px; height: 16px; border: none; border-radius: 50%; cursor: pointer; box-shadow: 0 0 0 1px rgba(255,255,255,0.18) inset; display: inline-flex; align-items: center; justify-content: center; color: #fff; font-size: 0.68rem; font-weight: 900; line-height: 1; }
   .lesson-indicator.hw-indicator { background: var(--warning); }
   .lesson-indicator.test-indicator { background: var(--danger); }
   .tt-loading { text-align: center; padding: 40px; color: var(--text-muted); }
@@ -394,7 +394,7 @@
         </div>
         <div class="tt-week-nav">
           <button class="tt-nav-btn" onclick="changeWeek(-1)">← Zurück</button>
-          <button class="tt-nav-btn" onclick="changeWeek(0)">Heute</button>
+          <button class="tt-nav-btn" id="ttTodayBtn" onclick="changeWeek(0)">Heute</button>
           <button class="tt-nav-btn" onclick="changeWeek(1)">Vor →</button>
         </div>
       </div>
@@ -1265,6 +1265,8 @@ async function renderTimetable() {
     ttInitialized=true;
     buildDayTabs();
     await loadTimetableData();
+  } else if(ttData) {
+    renderDayLessons(selectedDayIdx);
   }
 }
 
@@ -1282,6 +1284,7 @@ async function loadTimetableData() {
   if(cachedData){
     ttData=cachedData;
     updateWeekHeader();
+    updateNavButtons();
     renderDayLessons(selectedDayIdx);
     // Load fresh data in background if cache is older than 1 hour
     if(!cacheAge || cacheAge > 3600) refreshTimetableBackground();
@@ -1335,6 +1338,7 @@ async function fetchTimetableFromServer(maxRetries){
 function updateNavButtons(){
   const navBtns=document.querySelectorAll('.tt-nav-btn');
   if(navBtns[0])navBtns[0].disabled=ttWeekOffset<=TT_MIN_OFFSET;
+  if(navBtns[1])navBtns[1].disabled=[0,6].includes(new Date().getDay());
   if(navBtns[2])navBtns[2].disabled=ttWeekOffset>=TT_MAX_OFFSET;
 }
 
@@ -1382,6 +1386,7 @@ const TT_MIN_OFFSET = 0;
 const TT_MAX_OFFSET = 1;
 
 function changeWeek(dir) {
+  if(dir===0 && [0,6].includes(new Date().getDay())) return;
   if(dir===0){
     ttWeekOffset=0;
     // Jump to today's day tab
@@ -1847,11 +1852,33 @@ function buildHWCard(h,kind){
 function toggleExpand(id){const el=document.getElementById('hwcard-'+id)||document.getElementById('testcard-'+id);if(el)el.classList.toggle('expanded');}
 window.toggleExpand=toggleExpand;
 
-async function toggleDone(id){const item=homework.find(h=>h.id===id);if(item){item.done=!item.done;await saveData();renderHW();renderTests();renderHome();}}
+async function toggleDone(id){
+  const item=homework.find(h=>h.id===id);
+  if(!item)return;
+  item.done=!item.done;
+  refreshHomeworkRelatedViews();
+  await saveData();
+}
 window.toggleDone=toggleDone;
 
-async function deleteItem(id){const item=homework.find(h=>h.id===id)||events.find(e=>e.id===id);if(!canEditItem(item))return;homework=homework.filter(h=>h.id!==id);events=events.filter(e=>e.id!==id);await saveData();renderHW();renderTests();renderEvents();renderHome();}
+async function deleteItem(id){
+  const item=homework.find(h=>h.id===id)||events.find(e=>e.id===id);
+  if(!canEditItem(item))return;
+  homework=homework.filter(h=>h.id!==id);
+  events=events.filter(e=>e.id!==id);
+  renderEvents();
+  refreshHomeworkRelatedViews();
+  await saveData();
+}
 window.deleteItem=deleteItem;
+
+function refreshHomeworkRelatedViews(){
+  renderHW();
+  renderTests();
+  renderHome();
+  if(ttData)renderDayLessons(selectedDayIdx);
+  refreshOpenTTIndicator();
+}
 
 // ── TESTS ─────────────────────────────────────────
 function setTestFilter(f,el){testFilter=f;document.querySelectorAll('#testsPage .filter-tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');renderTests();}
@@ -2023,13 +2050,11 @@ async function saveNewItem(){
   } else {
     homework.push({id:uid(),type,subject:toCanonicalSubject(subj)||'Allgemein',desc,date,done:false,createdBy:currentUser.email,attachments:[...addItemFiles]});
   }
-  await saveData();
   closeModal('addItemOverlay');
   addItemFiles=[];
-  if(addingFor==='homework')renderHW();
-  else if(addingFor==='tests')renderTests();
-  else renderEvents();
-  renderHome();
+  if(addingFor==='events')renderEvents();
+  refreshHomeworkRelatedViews();
+  await saveData();
 }
 window.saveNewItem=saveNewItem;
 
@@ -2224,9 +2249,10 @@ async function saveEditItem(){
     await saveRecoveryEntries();
     closeModal('editItemOverlay'); renderRecovery(); return;
   }
-  await saveData();
   closeModal('editItemOverlay');
-  renderHW(); renderTests(); renderEvents(); renderHome();
+  renderEvents();
+  refreshHomeworkRelatedViews();
+  await saveData();
 }
 window.saveEditItem=saveEditItem;
 
@@ -2571,9 +2597,10 @@ function validateSubjectOnDate(subject, dateStr){
     return { valid:false, message:'Für Wochenenden können keine Fächer eingetragen werden.' };
   }
   
-  // Check if subject is in our known subjects list (from CSV + timetable data)
-  const knownSubjects=getUntisSubjects();
-  const isKnown=knownSubjects.some(s=>normalizeSubjectForCompare(s)===normalizeSubjectForCompare(subject));
+  // Check if subject is in our known subjects list from the CSV mapping
+  // Accept BOTH full names (Sport) and short codes (spo)
+  const subjNorm=normalizeSubjectForCompare(subject);
+  const isKnown=Object.values(UNTIS_SUBJECT_MAP).some(fullName=>normalizeSubjectForCompare(fullName)===subjNorm);
   if(!isKnown){
     return { valid:false, message:`${toCanonicalSubject(subject)} ist nicht in der Untis-Fächerliste.` };
   }
@@ -2585,10 +2612,27 @@ function validateSubjectOnDate(subject, dateStr){
 }
 
 // ── TIMETABLE INDICATOR POPUP ─────────────────────
+function normalizeDateForCompare(value=''){
+  if(!value)return '';
+  if(/^\d{4}-\d{2}-\d{2}$/.test(value))return value;
+  const parsed=new Date(value);
+  if(Number.isNaN(parsed.getTime()))return '';
+  return toDateKey(parsed);
+}
+
+function subjectsMatch(a='',b=''){
+  const left=normalizeSubjectForCompare(a);
+  const right=normalizeSubjectForCompare(b);
+  if(!left||!right)return false;
+  if(left===right)return true;
+  return left.includes(right) || right.includes(left);
+}
+
 function getItemsForSubjectDate(subject,date,kind='all'){
   return homework.filter(item=>{
-    if(item.done||item.date!==date)return false;
-    if(normalizeSubjectForCompare(item.subject)!==normalizeSubjectForCompare(subject))return false;
+    if(item.done)return false;
+    if(normalizeDateForCompare(item.date)!==normalizeDateForCompare(date))return false;
+    if(!subjectsMatch(item.subject,subject))return false;
     if(kind==='tests')return TEST_TYPES.includes(item.type);
     if(kind==='homework')return HOMEWORK_TYPES.includes(item.type);
     return true;
@@ -2603,10 +2647,10 @@ function buildLessonIndicators(subject,date){
   const subjectKey=encodeURIComponent(subject);
   const parts=[];
   if(homeworkItems.length){
-    parts.push(`<button class="lesson-indicator hw-indicator" title="Hausaufgaben anzeigen" onclick="event.stopPropagation();showTTIndicator('${subjectKey}','${date}','homework')"></button>`);
+    parts.push(`<button class="lesson-indicator hw-indicator" title="Hausaufgaben anzeigen" onclick="event.stopPropagation();showTTIndicator('${subjectKey}','${date}','homework')">!</button>`);
   }
   if(testItems.length){
-    parts.push(`<button class="lesson-indicator test-indicator" title="Tests anzeigen" onclick="event.stopPropagation();showTTIndicator('${subjectKey}','${date}','tests')"></button>`);
+    parts.push(`<button class="lesson-indicator test-indicator" title="Tests anzeigen" onclick="event.stopPropagation();showTTIndicator('${subjectKey}','${date}','tests')">!</button>`);
   }
   return `<div class="lesson-indicators">${parts.join('')}</div>`;
 }
@@ -2620,7 +2664,16 @@ function escapeHtml(value=''){
     .replace(/'/g,'&#39;');
 }
 
-function showTTIndicator(subjectKey, date, kind='all'){
+let activeTTIndicatorContext=null;
+
+function refreshOpenTTIndicator(){
+  const overlay=document.getElementById('ttIndicatorOverlay');
+  if(!overlay||overlay.classList.contains('hidden')||!activeTTIndicatorContext)return;
+  showTTIndicator(activeTTIndicatorContext.subjectKey,activeTTIndicatorContext.date,activeTTIndicatorContext.kind,false);
+}
+
+function showTTIndicator(subjectKey, date, kind='all', open=true){
+  activeTTIndicatorContext={subjectKey,date,kind};
   const subject=toCanonicalSubject(decodeURIComponent(subjectKey));
   const items=getItemsForSubjectDate(subject,date,kind).sort((a,b)=>a.type.localeCompare(b.type,'de')||a.desc.localeCompare(b.desc,'de'));
   const el=document.getElementById('ttIndicatorContent');
@@ -2643,13 +2696,13 @@ function showTTIndicator(subjectKey, date, kind='all'){
       </div>`;
     }).join('');
   }
-  openModal('ttIndicatorOverlay');
+  if(open)openModal('ttIndicatorOverlay');
 }
 window.showTTIndicator=showTTIndicator;
 
 // ── MODALS ────────────────────────────────────────
 function openModal(id){document.getElementById(id).classList.remove('hidden');}
-function closeModal(id){document.getElementById(id).classList.add('hidden');}
+function closeModal(id){if(id==='ttIndicatorOverlay')activeTTIndicatorContext=null;document.getElementById(id).classList.add('hidden');}
 function closeIfBackdrop(e,id){if(e.target.id===id)closeModal(id);}
 window.openModal=openModal; window.closeModal=closeModal; window.closeIfBackdrop=closeIfBackdrop;
 </script>
