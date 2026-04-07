@@ -156,16 +156,17 @@
   .lesson-group-header { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 8px; }
   .lesson-group-header:last-child { margin-bottom: 0; }
   .lesson-time { font-family: 'Space Mono', monospace; font-size: 0.75rem; color: var(--text-muted); min-width: 80px; flex-shrink: 0; }
-  .lesson-subjects { display: flex; gap: 8px; flex-wrap: wrap; flex: 1; }
+  .lesson-subjects { display: flex; flex-direction: column; gap: 8px; flex: 1; }
   .lesson-item { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex: 1; min-width: 140px; }
   .lesson-item-main { flex: 1; min-width: 0; }
   .lesson-subject { font-weight: 600; font-size: 0.9rem; }
   .lesson-room { font-size: 0.78rem; color: var(--text-secondary); margin-top: 3px; }
+  .lesson-old-teacher { text-decoration: line-through; opacity: 0.7; margin-right: 6px; }
   .lesson-item.cancelled { opacity: 0.6; }
   .lesson-item.cancelled .lesson-subject { text-decoration: line-through; color: var(--danger); }
   .lesson-item.substitution { padding: 6px 8px; border-left: 3px solid var(--warning); background: rgba(255,179,0,0.05); border-radius: 4px; }
   .lesson-group.holiday { border-left: 3px solid var(--success); background: rgba(0,229,160,0.05); }
-  .tag-sub { font-size: 0.68rem; padding: 2px 8px; border-radius: 10px; background: rgba(255,179,0,0.12); color: var(--warning); font-weight: 700; }
+  .tag-sub { font-size: 0.68rem; padding: 2px 8px; border-radius: 10px; background: rgba(255,179,0,0.16); color: #8a5a00; font-weight: 700; }
   .tag-cancel { font-size: 0.68rem; padding: 2px 8px; border-radius: 10px; background: rgba(255,64,96,0.1); color: var(--danger); font-weight: 700; }
   .lesson-indicators { display: flex; gap: 6px; flex-shrink: 0; margin-top: 1px; }
   .lesson-indicator { width: 16px; height: 16px; border: none; border-radius: 50%; cursor: pointer; box-shadow: 0 0 0 1px rgba(255,255,255,0.18) inset; display: inline-flex; align-items: center; justify-content: center; color: #fff; font-size: 0.68rem; font-weight: 900; line-height: 1; }
@@ -689,6 +690,7 @@ let signupTempEmail = '', signupTempPw = '', signupIsAdmin = false;
 let isRegistering = false;
 let ttData = null, ttWeekOffset = 0;
 let selectedDayIdx = new Date().getDay() === 0 ? 4 : (new Date().getDay() === 6 ? 4 : new Date().getDay() - 1);
+let ttAutoRefreshTimer = null;
 let addItemFiles = [];
 let addAnnouncementFiles = [];
 let timetables = {};
@@ -721,7 +723,7 @@ let teacherNames = {
   'En': {fullName: 'Endemann', gender: 'm'},
   'Bz': {fullName: 'Fiedler', gender: 'm'},
   'Fz': {fullName: 'Fritz', gender: 'm'},
-  'Fg': {fullName: 'Frihling', gender: 'f'},
+  'Fg': {fullName: 'Frühling', gender: 'f'},
   'Gg': {fullName: 'Gehrig', gender: 'f'},
   'Gl': {fullName: 'Gieseler', gender: 'f'},
   'Gk': {fullName: 'Gralka', gender: 'm'},
@@ -1160,6 +1162,10 @@ const pageTitles={home:'🏠 Startseite',timetable:'📅 Stundenplan',homework:'
 
 function goTo(page) {
   currentPage=page;
+  if(ttAutoRefreshTimer){
+    clearInterval(ttAutoRefreshTimer);
+    ttAutoRefreshTimer=null;
+  }
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   document.getElementById(page+'Page').classList.add('active');
@@ -1169,7 +1175,12 @@ function goTo(page) {
   document.getElementById('topbarTitle').textContent=pageTitles[page]||'';
   document.getElementById('fabBtn').style.display='none';
   if(page==='home')renderHome();
-  if(page==='timetable')renderTimetable();
+  if(page==='timetable'){
+    renderTimetable();
+    ttAutoRefreshTimer=setInterval(()=>{
+      if(currentPage==='timetable')refreshTimetableBackground();
+    },30000);
+  }
   if(page==='homework'){renderHW();if(canEdit())document.getElementById('fabBtn').style.display='flex';}
   if(page==='tests'){renderTests();if(canEdit())document.getElementById('fabBtn').style.display='flex';}
   if(page==='events'){renderEvents();if(canEdit())document.getElementById('fabBtn').style.display='flex';}
@@ -1287,8 +1298,8 @@ async function loadTimetableData() {
     updateWeekHeader();
     updateNavButtons();
     renderDayLessons(selectedDayIdx);
-    // Load fresh data in background if cache is older than 1 hour
-    if(!cacheAge || cacheAge > 3600) refreshTimetableBackground();
+    // Always load fresh data in background to pick up quick changes like Vertretung/Entfall.
+    refreshTimetableBackground();
     return;
   }
   
@@ -1358,12 +1369,10 @@ async function refreshTimetableBackground(){
       const weekMonday = freshData.week.monday;
       timetables[weekMonday] = freshData;
       await fbSet('timetables', timetables);
-      // Only update if current week still matches
-      if(ttWeekOffset===0){
-        ttData=freshData;
-        renderDayLessons(selectedDayIdx);
-        updateWeekHeader();
-      }
+      // Apply fresh data immediately for the currently open timetable week
+      ttData=freshData;
+      renderDayLessons(selectedDayIdx);
+      updateWeekHeader();
     }
   } catch(err) {
     // Silent fail - cache is already being used
@@ -1420,8 +1429,43 @@ function getTTDayDate(idx) {
   return toDateKey(mon);
 }
 
+function splitPackedField(value=''){
+  const v=String(value||'').trim();
+  if(!v)return [''];
+  const delimiters=[' | ',' / ',' + ','; '];
+  for(const d of delimiters){
+    if(v.includes(d)){
+      return v.split(d).map(s=>s.trim()).filter(Boolean);
+    }
+  }
+  return [v];
+}
+
+function expandPackedLessons(lessons=[]){
+  const expanded=[];
+  lessons.forEach(lesson=>{
+    const subjects=splitPackedField(lesson.subject);
+    const teachers=splitPackedField(lesson.teacher);
+    const rooms=splitPackedField(lesson.room);
+    if(subjects.length<=1){
+      expanded.push(lesson);
+      return;
+    }
+    subjects.forEach((subject,idx)=>{
+      expanded.push({
+        ...lesson,
+        subject,
+        teacher: teachers[idx] || teachers[0] || lesson.teacher,
+        room: rooms[idx] || rooms[0] || lesson.room
+      });
+    });
+  });
+  return expanded;
+}
+
 function renderDayLessons(idx) {
-  const lessons=ttData?.days?.[idx]||[];
+  const rawLessons=ttData?.days?.[idx]||[];
+  const lessons=expandPackedLessons(rawLessons);
   const el=document.getElementById('ttContent');
   if(!lessons.length){
     el.innerHTML=`<div class="lesson-group holiday"><div style="flex:1;"><div class="lesson-subject" style="color:var(--success)">🎉 Kein Unterricht</div><div class="lesson-room">Möglicherweise Ferien oder schulfrei</div></div></div>`;
@@ -1430,67 +1474,58 @@ function renderDayLessons(idx) {
 
   const dayDate=getTTDayDate(idx);
 
-  // Group lessons by time slot (double hours and parallels stay together)
-  const grouped = [];
-  let i = 0;
-  while(i < lessons.length) {
-    const current = lessons[i];
-    const currentMinutes = parseTime(current.time);
-    const next = lessons[i+1];
-    const isDoubleHour = next && parseTime(next.time) === currentMinutes + 45;
-
-    if(isDoubleHour) {
-      const sameGroup = [current];
-      let j = i+1;
-      while(j < lessons.length && parseTime(lessons[j].time) < currentMinutes + 90) {
-        sameGroup.push(lessons[j]);
-        j++;
-      }
-      grouped.push({lessons: sameGroup, isDouble: true});
-      i = j;
-    } else {
-      const sameGroup = [current];
-      let j = i+1;
-      while(j < lessons.length && lessons[j].time === current.time) {
-        sameGroup.push(lessons[j]);
-        j++;
-      }
-      grouped.push({lessons: sameGroup, isDouble: false});
-      i = j;
+  // Group strictly by exact start time to prevent accidental merges/missing rows.
+  const grouped=[];
+  let i=0;
+  while(i<lessons.length){
+    const current=lessons[i];
+    const sameGroup=[current];
+    let j=i+1;
+    while(j<lessons.length && lessons[j].time===current.time){
+      sameGroup.push(lessons[j]);
+      j++;
     }
+    grouped.push({lessons:sameGroup});
+    i=j;
   }
 
-  el.innerHTML=grouped.map(group=>{
-    // For double hours, split into first-slot and second-slot lessons
-    let firstSlotTime=group.lessons[0].time;
-    let html='';
-    if(group.isDouble){
-      const slot1=group.lessons.filter(l=>l.time===firstSlotTime);
-      const slot2=group.lessons.filter(l=>l.time!==firstSlotTime);
-      html=renderSlotLessons(slot1,true,dayDate)+
-        (slot2.length?'<div class="double-hour-divider"></div>'+renderSlotLessons(slot2,false,dayDate):'');
-    } else {
-      html=renderSlotLessons(group.lessons,true,dayDate);
-    }
-
-    return `<div class="lesson-group${group.isDouble?' double-hour':''}">
-      ${html}
-    </div>`;
-  }).join('');
+  el.innerHTML=grouped.map(group=>`<div class="lesson-group">${renderSlotLessons(group.lessons,true,dayDate)}</div>`).join('');
 }
 
 function renderSlotLessons(lessons, showTime, dateKey=''){
   return lessons.map((l,i)=>{
-    const cls=l.cancelled?'cancelled':l.substitution?'substitution':'';
-    const tag=l.cancelled?`<span class="tag-cancel">ENTFALL</span>`:l.substitution?`<span class="tag-sub">VERTRETUNG</span>`:'';
+    const teacherRaw=(l.teacher||'').trim();
+    const roomRaw=(l.room||'').trim();
+    const noteRaw=(l.note||'').trim();
+    const noteLower=noteRaw.toLowerCase();
+    const isAufgTeacher=teacherRaw.toLowerCase()==='aufg';
+    const isHomeRoom=roomRaw.toLowerCase()==='home';
+    const isEntfall=Boolean(l.cancelled||isAufgTeacher||isHomeRoom);
+    const originalTeacherRaw=(l.originalTeacher||l.oldTeacher||l.previousTeacher||'').trim();
+    const hasOriginalTeacher=Boolean(originalTeacherRaw);
+    const isVertretungHint=noteLower.includes('vertret');
+    const isVertretungFlag=Boolean(l.substitution||l.isSubstitution||l.vertretung||l.replacementTeacher);
+    const isVertretung=Boolean((isVertretungFlag||hasOriginalTeacher||isVertretungHint) && !isEntfall);
+    const cls=isEntfall?'cancelled':isVertretung?'substitution':'';
+    const tag=isEntfall?`<span class="tag-cancel">ENTFALL</span>`:isVertretung?`<span class="tag-sub">VERTRETUNG</span>`:'';
     const indicators=buildLessonIndicators(l.subject,dateKey);
+    const currentTeacher=expandTeacherName(teacherRaw)||'';
+    const originalTeacher=expandTeacherName(originalTeacherRaw)||'';
+    const replacementTeacher=escapeHtml(currentTeacher||teacherRaw||'Unbekannt');
+    const teacherLine=isEntfall
+      ? ''
+      : isVertretung
+        ? `${originalTeacher?`<span class="lesson-old-teacher">${escapeHtml(originalTeacher)}</span>`:'<span class="lesson-old-teacher">Regulär</span>'}Vertretung: ${replacementTeacher}`
+        : escapeHtml(currentTeacher);
+    const roomLine=isEntfall?'':(roomRaw?` · ${escapeHtml(roomRaw)}`:'');
+    const noteLine=noteRaw?` · ${escapeHtml(noteRaw)}`:'';
     return `<div class="lesson-group-header">
       ${showTime&&i===0?`<div class="lesson-time">${l.time}</div>`:'<div class="lesson-time"></div>'}
       <div class="lesson-subjects" style="flex:1;">
         <div class="lesson-item ${cls}">
           <div class="lesson-item-main">
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">${tag}<span class="lesson-subject">${toCanonicalSubject(l.subject)}</span></div>
-            <div class="lesson-room">${expandTeacherName(l.teacher)} · ${l.room}${l.note?' · '+l.note:''}</div>
+            <div class="lesson-room">${teacherLine}${roomLine}${noteLine}</div>
           </div>
           ${indicators}
         </div>
