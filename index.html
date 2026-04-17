@@ -162,6 +162,7 @@
   .lesson-subject { font-weight: 600; font-size: 0.9rem; }
   .lesson-room { font-size: 0.78rem; color: var(--text-secondary); margin-top: 3px; }
   .lesson-old-teacher { text-decoration: line-through; opacity: 0.7; margin-right: 6px; }
+  .lesson-sub-note { font-weight: 600; color: var(--accent); font-size: 0.85em; }
   .lesson-item.cancelled { opacity: 0.6; }
   .lesson-item.cancelled .lesson-subject { text-decoration: line-through; color: var(--danger); }
   .lesson-item.substitution { padding: 6px 8px; border-left: 3px solid var(--warning); background: rgba(255,179,0,0.05); border-radius: 4px; }
@@ -792,6 +793,10 @@ let teacherNames = {
 function expandTeacherName(abbr) {
   if(!abbr) return abbr;
   const trimmed = abbr.trim();
+  const parts = splitPackedField(trimmed);
+  if(parts.length > 1) {
+    return parts.map(part => expandTeacherName(part)).join(', ');
+  }
   const teacher = teacherNames[trimmed];
   if(teacher) { return (teacher.gender === 'f' ? 'Frau' : 'Herr') + ' ' + teacher.fullName; }
   // Case-insensitive fallback
@@ -1279,6 +1284,7 @@ async function renderTimetable() {
     await loadTimetableData();
   } else if(ttData) {
     renderDayLessons(selectedDayIdx);
+    refreshTimetableBackground();
   }
 }
 
@@ -1429,10 +1435,25 @@ function getTTDayDate(idx) {
   return toDateKey(mon);
 }
 
+function getLessonsForDay(idx){
+  const days=ttData?.days;
+  if(!days)return [];
+  if(Array.isArray(days))return days[idx]||[];
+  if(days[idx])return days[idx]||[];
+  const normalized=String(idx);
+  if(days[normalized])return days[normalized]||[];
+  // Defensive fallback for malformed keys like "\n0" or " day_1 "
+  for(const [key,value] of Object.entries(days)){
+    const digits=String(key).replace(/[^0-9]/g,'');
+    if(digits!=='' && Number(digits)===idx)return Array.isArray(value)?value:[];
+  }
+  return [];
+}
+
 function splitPackedField(value=''){
   const v=String(value||'').trim();
   if(!v)return [''];
-  const delimiters=[' | ',' / ',' + ','; '];
+  const delimiters=['<br />','<br/>','<br>','\n',' | ','|',' / ',' + ','; ',' ¦ ',', '];
   for(const d of delimiters){
     if(v.includes(d)){
       return v.split(d).map(s=>s.trim()).filter(Boolean);
@@ -1447,25 +1468,30 @@ function expandPackedLessons(lessons=[]){
     const subjects=splitPackedField(lesson.subject);
     const teachers=splitPackedField(lesson.teacher);
     const rooms=splitPackedField(lesson.room);
-    if(subjects.length<=1){
+    const count = Math.max(subjects.length, teachers.length, rooms.length);
+    if(count <= 1){
       expanded.push(lesson);
       return;
     }
-    subjects.forEach((subject,idx)=>{
+    for(let idx=0; idx<count; idx++){
       expanded.push({
         ...lesson,
-        subject,
+        subject: subjects[idx] || subjects[0] || lesson.subject,
         teacher: teachers[idx] || teachers[0] || lesson.teacher,
         room: rooms[idx] || rooms[0] || lesson.room
       });
-    });
+    }
   });
   return expanded;
 }
 
 function renderDayLessons(idx) {
-  const rawLessons=ttData?.days?.[idx]||[];
-  const lessons=expandPackedLessons(rawLessons);
+  const rawLessons=getLessonsForDay(idx);
+  const lessons=expandPackedLessons(rawLessons).sort((a,b)=>{
+    const sa=Number(a.startTime)||parseTime(String(a.time||''));
+    const sb=Number(b.startTime)||parseTime(String(b.time||''));
+    return sa-sb;
+  });
   const el=document.getElementById('ttContent');
   if(!lessons.length){
     el.innerHTML=`<div class="lesson-group holiday"><div style="flex:1;"><div class="lesson-subject" style="color:var(--success)">🎉 Kein Unterricht</div><div class="lesson-room">Möglicherweise Ferien oder schulfrei</div></div></div>`;
@@ -1474,7 +1500,7 @@ function renderDayLessons(idx) {
 
   const dayDate=getTTDayDate(idx);
 
-  // Group strictly by exact start time to prevent accidental merges/missing rows.
+  // Group by exact start time
   const grouped=[];
   let i=0;
   while(i<lessons.length){
@@ -1485,7 +1511,7 @@ function renderDayLessons(idx) {
       sameGroup.push(lessons[j]);
       j++;
     }
-    grouped.push({lessons:sameGroup});
+    grouped.push({lessons:sameGroup, isDouble: false});
     i=j;
   }
 
@@ -1515,7 +1541,7 @@ function renderSlotLessons(lessons, showTime, dateKey=''){
     const teacherLine=isEntfall
       ? ''
       : isVertretung
-        ? `${originalTeacher?`<span class="lesson-old-teacher">${escapeHtml(originalTeacher)}</span>`:'<span class="lesson-old-teacher">Regulär</span>'}Vertretung: ${replacementTeacher}`
+        ? `${escapeHtml(currentTeacher)} <span class="lesson-sub-note">(Vertretung${originalTeacher?', regulär: '+escapeHtml(originalTeacher):''})</span>`
         : escapeHtml(currentTeacher);
     const roomLine=isEntfall?'':(roomRaw?` · ${escapeHtml(roomRaw)}`:'');
     const noteLine=noteRaw?` · ${escapeHtml(noteRaw)}`:'';
@@ -1524,7 +1550,7 @@ function renderSlotLessons(lessons, showTime, dateKey=''){
       <div class="lesson-subjects" style="flex:1;">
         <div class="lesson-item ${cls}">
           <div class="lesson-item-main">
-            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">${tag}<span class="lesson-subject">${toCanonicalSubject(l.subject)}</span></div>
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">${tag}<span class="lesson-subject">${isEntfall && l.subject.toLowerCase().includes('aufgabe') ? '' : toCanonicalSubject(l.subject)}</span></div>
             <div class="lesson-room">${teacherLine}${roomLine}${noteLine}</div>
           </div>
           ${indicators}
@@ -1737,49 +1763,22 @@ function displayRecoveryTimetable(container, lessons, dateKey, hasData=false) {
     return;
   }
   
-  // Group lessons by time (same as timetable page)
+  // Group lessons by time
   const grouped = [];
   let i = 0;
   while(i < lessons.length) {
     const current = lessons[i];
-    const currentMinutes = parseTime(current.time);
-    const next = lessons[i+1];
-    const isDoubleHour = next && parseTime(next.time) === currentMinutes + 45;
-
-    if(isDoubleHour) {
-      const sameGroup = [current];
-      let j = i+1;
-      while(j < lessons.length && parseTime(lessons[j].time) < currentMinutes + 90) {
-        sameGroup.push(lessons[j]);
-        j++;
-      }
-      grouped.push({lessons: sameGroup, isDouble: true});
-      i = j;
-    } else {
-      const sameGroup = [current];
-      let j = i+1;
-      while(j < lessons.length && lessons[j].time === current.time) {
-        sameGroup.push(lessons[j]);
-        j++;
-      }
-      grouped.push({lessons: sameGroup, isDouble: false});
-      i = j;
+    const sameGroup = [current];
+    let j = i+1;
+    while(j < lessons.length && lessons[j].time === current.time) {
+      sameGroup.push(lessons[j]);
+      j++;
     }
+    grouped.push({lessons: sameGroup, isDouble: false});
+    i = j;
   }
 
-  container.innerHTML = grouped.map(group => {
-    let firstSlotTime=group.lessons[0].time;
-    let html='';
-    if(group.isDouble){
-      const slot1=group.lessons.filter(l=>l.time===firstSlotTime);
-      const slot2=group.lessons.filter(l=>l.time!==firstSlotTime);
-      html=renderSlotLessons(slot1,true,dateKey)+
-        (slot2.length?'<div class="double-hour-divider"></div>'+renderSlotLessons(slot2,false,dateKey):'');
-    } else {
-      html=renderSlotLessons(group.lessons,true,dateKey);
-    }
-    return `<div class="lesson-group${group.isDouble?' double-hour':''}">${html}</div>`;
-  }).join('');
+  container.innerHTML = grouped.map(group => `<div class="lesson-group">${renderSlotLessons(group.lessons,true,dateKey)}</div>`).join('');
 }
 window.renderRecoveryDay=renderRecoveryDay;
 
@@ -1793,7 +1792,7 @@ function openAddRecovery(dateKey) {
   document.getElementById('itemDetailContent').innerHTML = `
     <div class="modal-title">✏️ Stoff eintragen</div>
     <div style="font-size:0.82rem;color:var(--text-muted);margin-bottom:16px;">📅 ${label}</div>
-    <div class="form-group"><label class="form-label">Fach</label><input class="form-input" type="text" id="recovSubject" placeholder="z.B. Mathematik"></div>
+    <div class="form-group"><label class="form-label">Fach</label><select class="form-input" id="recovSubject"></select></div>
     <div class="form-group"><label class="form-label">Was wurde gemacht?</label><textarea class="form-input" id="recovText" placeholder="Beschreibe den Unterrichtsstoff…" rows="4"></textarea></div>
     <div class="form-group">
       <label class="form-label">Anhang (optional)</label>
@@ -1803,6 +1802,8 @@ function openAddRecovery(dateKey) {
     </div>
     <button class="btn btn-primary" style="margin-top:8px;" onclick="saveRecoveryEntry()">Eintragen</button>
   `;
+  const subjSel = document.getElementById('recovSubject');
+  populateSubjectDropdown(subjSel);
   openModal('itemDetailOverlay');
 }
 window.openAddRecovery=openAddRecovery;
@@ -2280,7 +2281,7 @@ async function saveEditItem(){
   } else if(kind==='recovery'){
     for(const dk of Object.keys(recoveryEntries)){
       const entry=recoveryEntries[dk].find(e=>e.id===id);
-      if(entry){ entry.text=desc; entry.subject=document.getElementById('editItemSubject').value.trim(); break; }
+      if(entry){ entry.text=desc; entry.subject=toCanonicalSubject(document.getElementById('editItemSubject').value.trim()); break; }
     }
     await saveRecoveryEntries();
     closeModal('editItemOverlay'); renderRecovery(); return;
